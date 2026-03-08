@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/style.css" />
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="/admin.html" class="topbar__logo">🏗️ Weekly Architecture</a>
+    <div class="topbar__right">
+      <a href="/dashboard.html" class="btn btn-ghost btn-sm">Dashboard</a>
+      <span class="topbar__user" style="font-size:13px;">
+        <strong id="topbar-name">…</strong>
+        <span class="badge badge-admin" style="margin-left:6px;">Admin</span>
+      </span>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- Skeleton while loading -->
+  <div id="skeleton" class="container">
+    <div style="background:#e2e8f0;height:80px;border-radius:10px;margin-bottom:16px;animation:pulse 1.4s infinite alternate;"></div>
+    <div style="background:#e2e8f0;height:300px;border-radius:10px;animation:pulse 1.4s infinite alternate;"></div>
+    <style>@keyframes pulse{from{opacity:.6}to{opacity:1}}</style>
+  </div>
+
+  <!-- Main content (shown after auth check) -->
+  <div id="content" style="display:none;">
+    <div class="container">
+
+      <!-- Page header -->
+      <div class="section-header" style="margin-bottom:24px;">
+        <div>
+          <div class="section-title">User Management</div>
+          <div class="section-sub">View and manage all registered users</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-total">—</div>
+          <div class="stat-card__label">Total Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-admins" style="color:#6d28d9;">—</div>
+          <div class="stat-card__label">Admins</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-users" style="color:#1d4ed8;">—</div>
+          <div class="stat-card__label">Regular Users</div>
+        </div>
+      </div>
+
+      <!-- Search and table -->
+      <div class="section-header" style="margin-bottom:12px;">
+        <div class="section-title" style="font-size:16px;">All Users</div>
+        <input
+          id="search"
+          type="search"
+          class="form-input"
+          placeholder="Search by name, email or role…"
+          style="max-width:280px;"
+        />
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Last Login</th>
+              <th>Registered</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <tr>
+              <td colspan="6" style="text-align:center;color:#6b7280;padding:40px;">
+                <span class="spinner"></span> Loading…
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/admin.js"></script>
+</body>
+</html>

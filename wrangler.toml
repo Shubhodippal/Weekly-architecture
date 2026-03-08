@@ -1,0 +1,15 @@
+name               = "weekly-architecture-auth"
+main               = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./public"
+
+[[d1_databases]]
+binding       = "DB"
+database_name = "auth-db"
+database_id   = "f5584ae6-84ab-4c12-bb47-7cdf4b9cc649"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id      = "aa0fd899303d4a27a41bb6b553e0012f"

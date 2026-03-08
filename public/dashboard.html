@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/style.css" />
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="/dashboard.html" class="topbar__logo">🏗️ Weekly Architecture</a>
+    <div class="topbar__right">
+      <span class="topbar__user">Hello, <strong id="topbar-name">…</strong></span>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- Skeleton while loading -->
+  <div id="skeleton" class="container">
+    <div style="background:#e2e8f0;height:120px;border-radius:10px;animation:pulse 1.4s infinite alternate;"></div>
+    <style>@keyframes pulse{from{opacity:.6}to{opacity:1}}</style>
+  </div>
+
+  <!-- Main content -->
+  <div id="content" style="display:none;">
+    <div class="container">
+
+      <!-- Profile card -->
+      <div class="profile-card">
+        <div class="profile-avatar" id="avatar">?</div>
+        <div class="profile-info">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="profile-info__name" id="user-name">—</span>
+            <span class="badge" id="user-role-badge">—</span>
+          </div>
+          <div class="profile-info__email" id="user-email">—</div>
+          <div class="profile-meta">
+            <div class="profile-meta__row">
+              🕐 Last login: <strong id="user-last-login">—</strong>
+            </div>
+            <div class="profile-meta__row">
+              📅 Member since: <strong id="user-joined">—</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="section-header">
+        <div>
+          <div class="section-title">Quick Actions</div>
+          <div class="section-sub">What would you like to do?</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+
+        <!-- Admin Panel (only visible to admin) -->
+        <a href="/admin.html" class="quick-card" id="admin-card" style="display:none;">
+          <div class="quick-card__icon purple">⚙️</div>
+          <div>
+            <div class="quick-card__title">Admin Panel</div>
+            <div class="quick-card__desc">Manage users and platform settings</div>
+          </div>
+        </a>
+
+        <!-- Profile card -->
+        <div class="quick-card" style="cursor:default;">
+          <div class="quick-card__icon blue">👤</div>
+          <div>
+            <div class="quick-card__title">Your Profile</div>
+            <div class="quick-card__desc">Authenticated via OTP — session active</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/dashboard.js"></script>
+</body>
+</html>
