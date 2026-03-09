@@ -13,3 +13,7 @@ database_id   = "f5584ae6-84ab-4c12-bb47-7cdf4b9cc649"
 [[kv_namespaces]]
 binding = "SESSIONS"
 id      = "aa0fd899303d4a27a41bb6b553e0012f"
+
+[[r2_buckets]]
+binding     = "R2"
+bucket_name = "challenge-pdfs"

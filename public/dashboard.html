@@ -1,82 +1,262 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard</title>
+  <title>Weekly Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/style.css" />
 </head>
-<body>
+<body class="home-body">
 
-  <!-- Top bar -->
+  <!-- ── Top Bar ──────────────────────────────────────────────────────── -->
   <nav class="topbar">
-    <a href="/dashboard.html" class="topbar__logo">🏗️ Weekly Architecture</a>
+    <span class="topbar__logo">🏗️ Weekly Architecture</span>
     <div class="topbar__right">
-      <span class="topbar__user">Hello, <strong id="topbar-name">…</strong></span>
+      <span class="topbar__user hidden-xs">
+        <strong id="topbar-name">…</strong>
+        <span class="badge badge-admin" id="topbar-role-badge" style="display:none;margin-left:6px;"></span>
+      </span>
+      <!-- Admin actions (hidden for users) -->
+      <button id="btn-post-challenge" class="btn btn-primary btn-sm" style="display:none;">
+        + Post Challenge
+      </button>
+      <a href="/admin.html" id="btn-manage-users" class="btn btn-outline btn-sm" style="display:none;">
+        👥 Users
+      </a>
       <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
     </div>
   </nav>
 
-  <!-- Skeleton while loading -->
-  <div id="skeleton" class="container">
-    <div style="background:#e2e8f0;height:120px;border-radius:10px;animation:pulse 1.4s infinite alternate;"></div>
-    <style>@keyframes pulse{from{opacity:.6}to{opacity:1}}</style>
+  <!-- ── Page skeleton ────────────────────────────────────────────────── -->
+  <div id="skeleton" class="home-layout">
+    <aside class="home-sidebar left-sidebar">
+      <div class="skel-block" style="height:120px;"></div>
+      <div class="skel-block" style="height:80px;margin-top:12px;"></div>
+    </aside>
+    <main class="home-feed">
+      <div class="skel-block" style="height:72px;"></div>
+      <div class="skel-block" style="height:220px;margin-top:14px;"></div>
+      <div class="skel-block" style="height:220px;margin-top:14px;"></div>
+    </main>
+    <aside class="home-sidebar right-sidebar">
+      <div class="skel-block" style="height:160px;"></div>
+    </aside>
   </div>
 
-  <!-- Main content -->
-  <div id="content" style="display:none;">
-    <div class="container">
+  <!-- ── Main layout ───────────────────────────────────────────────────── -->
+  <div id="content" class="home-layout" style="display:none;">
 
-      <!-- Profile card -->
-      <div class="profile-card">
+    <!-- Left sidebar — profile -->
+    <aside class="home-sidebar left-sidebar">
+      <div class="sidebar-card profile-sidebar">
         <div class="profile-avatar" id="avatar">?</div>
-        <div class="profile-info">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span class="profile-info__name" id="user-name">—</span>
-            <span class="badge" id="user-role-badge">—</span>
-          </div>
-          <div class="profile-info__email" id="user-email">—</div>
-          <div class="profile-meta">
-            <div class="profile-meta__row">
-              🕐 Last login: <strong id="user-last-login">—</strong>
-            </div>
-            <div class="profile-meta__row">
-              📅 Member since: <strong id="user-joined">—</strong>
-            </div>
-          </div>
+        <div class="ps-name" id="user-name">—</div>
+        <div class="ps-email" id="user-email">—</div>
+        <span class="badge" id="user-role-badge" style="margin-top:6px;">—</span>
+        <div class="ps-meta">
+          <div>🕐 <span id="user-last-login">—</span></div>
+          <div>📅 <span id="user-joined">—</span></div>
         </div>
       </div>
 
-      <!-- Quick actions -->
-      <div class="section-header">
-        <div>
-          <div class="section-title">Quick Actions</div>
-          <div class="section-sub">What would you like to do?</div>
-        </div>
-      </div>
-
-      <div class="dash-grid">
-
-        <!-- Admin Panel (only visible to admin) -->
-        <a href="/admin.html" class="quick-card" id="admin-card" style="display:none;">
-          <div class="quick-card__icon purple">⚙️</div>
-          <div>
-            <div class="quick-card__title">Admin Panel</div>
-            <div class="quick-card__desc">Manage users and platform settings</div>
-          </div>
+      <!-- Admin quick links (sidebar) -->
+      <div class="sidebar-card" id="admin-sidebar-links" style="display:none;">
+        <div class="sidebar-card__title">Admin Tools</div>
+        <button onclick="openPostModal()" class="sidebar-link sidebar-link--primary">
+          📤 Post a Challenge
+        </button>
+        <a href="/admin.html" class="sidebar-link">
+          👥 User Management
         </a>
+      </div>
+    </aside>
 
-        <!-- Profile card -->
-        <div class="quick-card" style="cursor:default;">
-          <div class="quick-card__icon blue">👤</div>
-          <div>
-            <div class="quick-card__title">Your Profile</div>
-            <div class="quick-card__desc">Authenticated via OTP — session active</div>
-          </div>
+    <!-- Centre feed -->
+    <main class="home-feed">
+
+      <!-- Filter bar -->
+      <div class="feed-filter-bar">
+        <span class="feed-filter-title">🏆 Challenges</span>
+        <div class="feed-filters">
+          <button class="filter-pill active" data-filter="all">All</button>
+          <button class="filter-pill" data-filter="active">Active</button>
+          <button class="filter-pill" data-filter="expired">Expired</button>
         </div>
+      </div>
 
+      <!-- Challenge feed -->
+      <div id="feed-list">
+        <div class="feed-loading">
+          <span class="spinner"></span> Loading challenges…
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Right sidebar — stats -->
+    <aside class="home-sidebar right-sidebar">
+      <div class="sidebar-card">
+        <div class="sidebar-card__title">📊 Stats</div>
+        <div class="stat-row"><span>Total</span><strong id="stat-total">—</strong></div>
+        <div class="stat-row"><span>Active</span><strong id="stat-active" style="color:#059669;">—</strong></div>
+        <div class="stat-row"><span>Expired</span><strong id="stat-expired" style="color:#dc2626;">—</strong></div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Post Challenge Modal (admin only)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none;" onclick="closePostModal(event)">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">📤 Post a Challenge</h2>
+        <button class="modal-close" onclick="closePostModal(true)" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert" id="modal-alert"></div>
+        <div class="alert alert-success" id="modal-success" style="display:none;"></div>
+
+        <form id="challenge-form" novalidate>
+
+          <div class="form-group">
+            <label class="form-label" for="c-title">Title <span class="req">*</span></label>
+            <input id="c-title" type="text" class="form-input" placeholder="e.g. System Design: URL Shortener" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="c-desc">Description <span style="color:#9ca3af;font-weight:400;">(optional)</span></label>
+            <textarea id="c-desc" class="form-input" rows="3" placeholder="What should participants do?" style="resize:vertical;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="c-date">Submission Deadline <span class="req">*</span></label>
+            <input id="c-date" type="date" class="form-input" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Challenge PDF <span class="req">*</span></label>
+            <div id="drop-zone" class="drop-zone" onclick="document.getElementById('c-pdf').click()">
+              <div class="drop-zone__icon">📄</div>
+              <div class="drop-zone__label" id="drop-label">Click or drag & drop PDF here</div>
+              <div class="drop-zone__sub">Max 20 MB</div>
+            </div>
+            <input id="c-pdf" type="file" accept="application/pdf,.pdf" style="display:none;" />
+          </div>
+
+          <div id="progress-wrap" style="display:none;margin-bottom:14px;">
+            <div style="font-size:12px;color:#6b7280;margin-bottom:5px;">Uploading…</div>
+            <div class="progress-track"><div id="progress-bar" class="progress-fill"></div></div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="closePostModal(true)">Cancel</button>
+            <button id="submit-btn" type="submit" class="btn btn-primary">
+              <span id="submit-spinner" class="spinner" style="display:none;"></span>
+              Post Challenge
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Edit Challenge Modal (admin only)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="edit-modal-overlay" class="modal-overlay" style="display:none;" onclick="closeEditModal(event)">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="edit-modal-title">✏️ Edit Challenge</h2>
+        <button class="modal-close" onclick="closeEditModal(true)" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert" id="edit-modal-alert"></div>
+        <form id="edit-challenge-form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="e-title">Title <span class="req">*</span></label>
+            <input id="e-title" type="text" class="form-input" placeholder="Challenge title" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="e-desc">Description <span style="color:#9ca3af;font-weight:400;">(optional)</span></label>
+            <textarea id="e-desc" class="form-input" rows="3" placeholder="What should participants do?" style="resize:vertical;"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="e-date">Submission Deadline <span class="req">*</span></label>
+            <input id="e-date" type="date" class="form-input" required />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="closeEditModal(true)">Cancel</button>
+            <button id="edit-submit-btn" type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Submit Solution Modal
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="submit-modal-overlay" class="modal-overlay" style="display:none;" onclick="closeSubmitModal(event)">
+    <div class="modal-box modal-box--wide" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="submit-modal-title">✍️ Submit Solution</h2>
+        <button class="modal-close" onclick="closeSubmitModal(true)" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert" id="submit-modal-alert"></div>
+        <form id="submit-solution-form" novalidate>
+          <input type="hidden" id="submit-challenge-id" value="" />
+          <div class="form-group">
+            <label class="form-label" for="sol-text">Your Solution <span style="color:#9ca3af;font-weight:400;">(write or paste your solution below)</span></label>
+            <textarea id="sol-text" class="form-input sol-editor" placeholder="Type your solution here…" rows="14" spellcheck="true"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Attach a File <span style="color:#9ca3af;font-weight:400;">(optional — PDF or image, max 20 MB)</span></label>
+            <div class="file-drop-zone" id="sol-drop-zone">
+              <input type="file" id="sol-file" class="file-drop-input" accept=".pdf,image/*" />
+              <div class="file-drop-content" id="sol-drop-content">
+                <span class="file-drop-icon">📎</span>
+                <span class="file-drop-text">Drag & drop or <label for="sol-file" class="file-drop-label">browse</label></span>
+              </div>
+              <div class="file-drop-preview" id="sol-file-preview" style="display:none;"></div>
+            </div>
+            <!-- existing submission file info -->
+            <div id="sol-current-file" style="display:none;" class="sol-current-file">
+              <span id="sol-current-file-name"></span>
+              <button type="button" class="sol-remove-file-btn" onclick="clearSubmissionFile()">✕ Remove</button>
+            </div>
+          </div>
+          <div class="modal-footer" style="flex-wrap:wrap;gap:8px;">
+            <button type="button" id="sol-delete-btn" class="btn btn-danger" style="display:none;" onclick="deleteMySubmission()">🗑 Delete Submission</button>
+            <div style="flex:1;"></div>
+            <button type="button" class="btn btn-ghost" onclick="closeSubmitModal(true)">Cancel</button>
+            <button id="sol-submit-btn" type="submit" class="btn btn-primary">💾 Save Solution</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       View Submissions Modal (admin only)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="view-submissions-overlay" class="modal-overlay" style="display:none;" onclick="closeViewSubmissionsModal(event)">
+    <div class="modal-box modal-box--wide" role="dialog" aria-modal="true" aria-labelledby="vs-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="vs-title">👁 Submissions</h2>
+        <button class="modal-close" onclick="closeViewSubmissionsModal(true)" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="vs-list" class="vs-list">
+          <p style="color:#9ca3af;text-align:center;">Loading…</p>
+        </div>
       </div>
     </div>
   </div>
