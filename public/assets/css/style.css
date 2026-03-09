@@ -711,6 +711,33 @@ body {
 .feed-card__deadline  { font-size: 13px; color: var(--text-sm); margin-bottom: 14px; }
 .feed-card__actions   { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
+/* ── Accept-toggle switch (admin) ───────────────────────────────────────── */
+.accept-toggle        { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.accept-toggle__track {
+  position: relative;
+  width: 44px; height: 24px;
+  border-radius: 12px;
+  background: #d1d5db;
+  transition: background .22s;
+  flex-shrink: 0;
+}
+.accept-toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0/.25);
+  transition: transform .22s;
+}
+.accept-toggle--on  .accept-toggle__track              { background: #059669; }
+.accept-toggle--on  .accept-toggle__track::after       { transform: translateX(20px); }
+.accept-toggle--off .accept-toggle__track              { background: #dc2626; }
+.accept-toggle__label { font-size: 12px; font-weight: 600; }
+.accept-toggle--on  .accept-toggle__label              { color: #065f46; }
+.accept-toggle--off .accept-toggle__label              { color: #991b1b; }
+
 /* ── Inline PDF viewer ───────────────────────────────────────────────────── */
 .pdf-inline-viewer {
   margin-top: 14px;
@@ -858,6 +885,19 @@ body {
 .modal-box--wide {
   max-width: 760px;
 }
+.modal-box--fullscreen {
+  max-width: 100%;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+.modal-box--fullscreen .modal-body {
+  flex: 1;
+  overflow-y: auto;
+}
 
 /* Notepad-style solution editor */
 .sol-editor {
@@ -956,3 +996,58 @@ body {
   white-space: pre-wrap; word-break: break-word;
   max-height: 240px; overflow-y: auto;
 }
+
+/* ── Grade badges ──────────────────────────────────────────────────────── */
+.grade-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  white-space: nowrap;
+}
+.grade-badge--wrong         { background: #fee2e2; color: #dc2626; }
+.grade-badge--partial       { background: #fef3c7; color: #d97706; }
+.grade-badge--almost        { background: #dbeafe; color: #2563eb; }
+.grade-badge--correct       { background: #d1fae5; color: #059669; }
+.grade-badge--not_attempted { background: #f1f5f9; color: #64748b; }
+
+.pts-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 700;
+  background: #f1f5f9; color: var(--text);
+}
+
+/* ── Grade evaluation panel (inside submission rows) ──────────────────── */
+.grade-panel {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.grade-panel__row {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px;
+}
+.grade-panel__row label {
+  font-size: 12px; font-weight: 600; color: var(--text-sm);
+  min-width: 60px; padding-top: 7px; flex-shrink: 0;
+}
+.grade-panel__actions {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+}
+.grade-alert {
+  padding: 6px 10px; border-radius: 6px; font-size: 13px;
+}
+
+/* ── Points widget in profile sidebar ────────────────────────────────── */
+.ps-points {
+  margin-top: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 10px;
+  color: #fff;
+  text-align: center;
+  width: 100%;
+}
+.ps-points__value { font-size: 26px; font-weight: 700; line-height: 1.1; }
+.ps-points__label { font-size: 11px; opacity: .8; margin-top: 2px; }

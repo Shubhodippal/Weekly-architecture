@@ -9,11 +9,15 @@ import { handleListChallenges } from "./handlers/challenges/listChallenges.js";
 import { handleDownloadChallenge } from "./handlers/challenges/downloadChallenge.js";
 import { handleDeleteChallenge } from "./handlers/challenges/deleteChallenge.js";
 import { handleEditChallenge } from "./handlers/challenges/editChallenge.js";
+import { handleExpireChallenge } from "./handlers/challenges/expireChallenge.js";
+import { handleDownloadAnswer } from "./handlers/challenges/downloadAnswer.js";
+import { handleReopenChallenge } from "./handlers/challenges/reopenChallenge.js";
 import { handleSubmit } from "./handlers/submissions/submit.js";
 import { handleGetMySubmission } from "./handlers/submissions/getMySubmission.js";
 import { handleDeleteMySubmission } from "./handlers/submissions/deleteMySubmission.js";
 import { handleDownloadSubmissionFile } from "./handlers/submissions/downloadSubmissionFile.js";
 import { handleListSubmissions } from "./handlers/submissions/listSubmissions.js";
+import { handleGradeSubmission } from "./handlers/submissions/gradeSubmission.js";
 import { json } from "./utils/response.js";
 
 export async function router(request, env) {
@@ -54,6 +58,18 @@ export async function router(request, env) {
     if (method === "GET" && downloadMatch)
       return handleDownloadChallenge(request, env, downloadMatch[1]);
 
+    const answerMatch = pathname.match(/^\/api\/challenges\/(\d+)\/answer$/);
+    if (method === "GET" && answerMatch)
+      return handleDownloadAnswer(request, env, answerMatch[1]);
+
+    const expireMatch = pathname.match(/^\/api\/challenges\/(\d+)\/expire$/);
+    if (method === "POST" && expireMatch)
+      return handleExpireChallenge(request, env, expireMatch[1]);
+
+    const reopenMatch = pathname.match(/^\/api\/challenges\/(\d+)\/reopen$/);
+    if (method === "POST" && reopenMatch)
+      return handleReopenChallenge(request, env, reopenMatch[1]);
+
     const challengeIdMatch = pathname.match(/^\/api\/challenges\/(\d+)$/);
     if (method === "PATCH" && challengeIdMatch)
       return handleEditChallenge(request, env, challengeIdMatch[1]);
@@ -78,6 +94,10 @@ export async function router(request, env) {
     const listSubmissionsMatch = pathname.match(/^\/api\/challenges\/(\d+)\/submissions$/);
     if (method === "GET" && listSubmissionsMatch)
       return handleListSubmissions(request, env, listSubmissionsMatch[1]);
+
+    const gradeSubmissionMatch = pathname.match(/^\/api\/submissions\/(\d+)\/grade$/);
+    if (method === "PATCH" && gradeSubmissionMatch)
+      return handleGradeSubmission(request, env, gradeSubmissionMatch[1]);
 
     return json({ success: false, message: "Not found" }, 404);
   } catch (err) {

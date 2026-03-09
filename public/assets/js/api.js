@@ -63,9 +63,26 @@ const api = {
     return apiFetch(`/api/challenges/${id}`, { method: "DELETE" });
   },
 
-  /** PATCH /api/challenges/:id */
-  editChallenge(id, body) {
-    return apiFetch(`/api/challenges/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+  /** PATCH /api/challenges/:id (multipart) */
+  editChallenge(id, formData) {
+    return fetch(`/api/challenges/${id}`, {
+      method: "PATCH",
+      body: formData,
+      credentials: "include",
+    }).then((r) => r.json());
+  },
+
+  /** POST /api/challenges/:id/expire */
+  expireChallenge(id) {
+    return apiFetch(`/api/challenges/${id}/expire`, { method: "POST" });
+  },
+
+  /** POST /api/challenges/:id/reopen */
+  reopenChallenge(id, last_date) {
+    return apiFetch(`/api/challenges/${id}/reopen`, {
+      method: "POST",
+      body: JSON.stringify({ last_date }),
+    });
   },
 
   /** POST /api/challenges/:id/submit (multipart) */
@@ -90,5 +107,13 @@ const api = {
   /** GET /api/challenges/:id/submissions (admin) */
   listSubmissions(challengeId) {
     return apiFetch(`/api/challenges/${challengeId}/submissions`);
+  },
+
+  /** PATCH /api/submissions/:id/grade (admin) */
+  gradeSubmission(submissionId, grade, remark) {
+    return apiFetch(`/api/submissions/${submissionId}/grade`, {
+      method: "PATCH",
+      body: JSON.stringify({ grade, remark }),
+    });
   },
 };

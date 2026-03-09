@@ -55,6 +55,11 @@
         <div class="ps-name" id="user-name">—</div>
         <div class="ps-email" id="user-email">—</div>
         <span class="badge" id="user-role-badge" style="margin-top:6px;">—</span>
+        <!-- Points widget (hidden until loaded) -->
+        <div class="ps-points" id="user-points" style="display:none;">
+          <div class="ps-points__value" id="points-value">0</div>
+          <div class="ps-points__label">🎯 total points</div>
+        </div>
         <div class="ps-meta">
           <div>🕐 <span id="user-last-login">—</span></div>
           <div>📅 <span id="user-joined">—</span></div>
@@ -149,6 +154,26 @@
             <input id="c-pdf" type="file" accept="application/pdf,.pdf" style="display:none;" />
           </div>
 
+          <!-- ── Answer section (revealed to users after expiry) ── -->
+          <div style="border-top:1px solid #e2e8f0;margin:18px 0 16px;padding-top:16px;">
+            <div style="font-size:13px;font-weight:600;color:#6d28d9;margin-bottom:12px;">💡 Answer / Solution <span style="color:#9ca3af;font-weight:400;">(optional — shown to users only after challenge closes)</span></div>
+
+            <div class="form-group">
+              <label class="form-label" for="c-answer-desc">Answer Description</label>
+              <textarea id="c-answer-desc" class="form-input" rows="3" placeholder="Describe the expected solution or approach…" style="resize:vertical;"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Answer PDF <span style="color:#9ca3af;font-weight:400;">(optional)</span></label>
+              <div id="answer-drop-zone" class="drop-zone" onclick="document.getElementById('c-answer-pdf').click()">
+                <div class="drop-zone__icon">📋</div>
+                <div class="drop-zone__label" id="answer-drop-label">Click or drag & drop answer PDF here</div>
+                <div class="drop-zone__sub">Max 20 MB</div>
+              </div>
+              <input id="c-answer-pdf" type="file" accept="application/pdf,.pdf" style="display:none;" />
+            </div>
+          </div>
+
           <div id="progress-wrap" style="display:none;margin-bottom:14px;">
             <div style="font-size:12px;color:#6b7280;margin-bottom:5px;">Uploading…</div>
             <div class="progress-track"><div id="progress-bar" class="progress-fill"></div></div>
@@ -170,8 +195,8 @@
   <!-- ══════════════════════════════════════════════════════════════════════
        Edit Challenge Modal (admin only)
   ══════════════════════════════════════════════════════════════════════════ -->
-  <div id="edit-modal-overlay" class="modal-overlay" style="display:none;" onclick="closeEditModal(event)">
-    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+  <div id="edit-modal-overlay" class="modal-overlay" style="display:none;padding:0;" onclick="closeEditModal(event)">
+    <div class="modal-box modal-box--fullscreen" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
       <div class="modal-header">
         <h2 class="modal-title" id="edit-modal-title">✏️ Edit Challenge</h2>
         <button class="modal-close" onclick="closeEditModal(true)" aria-label="Close">✕</button>
@@ -190,6 +215,32 @@
           <div class="form-group">
             <label class="form-label" for="e-date">Submission Deadline <span class="req">*</span></label>
             <input id="e-date" type="date" class="form-input" required />
+          </div>
+
+          <!-- ── Answer section ── -->
+          <div style="border-top:1px solid #e2e8f0;margin:18px 0 16px;padding-top:16px;">
+            <div style="font-size:13px;font-weight:600;color:#6d28d9;margin-bottom:12px;">💡 Answer / Solution <span style="color:#9ca3af;font-weight:400;">(shown to users after challenge closes)</span></div>
+
+            <div class="form-group">
+              <label class="form-label" for="e-answer-desc">Answer Description</label>
+              <textarea id="e-answer-desc" class="form-input" rows="3" placeholder="Describe the expected solution or approach…" style="resize:vertical;"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Answer PDF</label>
+              <!-- Current answer file (shown if one exists) -->
+              <div id="e-current-answer" style="display:none;margin-bottom:8px;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;align-items:center;justify-content:space-between;gap:8px;">
+                <span id="e-current-answer-name" style="font-size:13px;color:#166534;">📋 answer.pdf</span>
+                <button type="button" id="e-remove-answer-btn" class="btn btn-danger btn-sm" style="font-size:11px;padding:2px 8px;">✕ Remove</button>
+              </div>
+              <div id="e-answer-drop-zone" class="drop-zone" onclick="document.getElementById('e-answer-pdf').click()">
+                <div class="drop-zone__icon">📋</div>
+                <div class="drop-zone__label" id="e-answer-drop-label">Click or drag & drop new answer PDF here</div>
+                <div class="drop-zone__sub">Max 20 MB · replaces existing</div>
+              </div>
+              <input id="e-answer-pdf" type="file" accept="application/pdf,.pdf" style="display:none;" />
+              <input type="hidden" id="e-remove-answer" value="0" />
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-ghost" onclick="closeEditModal(true)">Cancel</button>
@@ -247,8 +298,8 @@
   <!-- ══════════════════════════════════════════════════════════════════════
        View Submissions Modal (admin only)
   ══════════════════════════════════════════════════════════════════════════ -->
-  <div id="view-submissions-overlay" class="modal-overlay" style="display:none;" onclick="closeViewSubmissionsModal(event)">
-    <div class="modal-box modal-box--wide" role="dialog" aria-modal="true" aria-labelledby="vs-title">
+  <div id="view-submissions-overlay" class="modal-overlay" style="display:none;padding:0;" onclick="closeViewSubmissionsModal(event)">
+    <div class="modal-box modal-box--fullscreen" role="dialog" aria-modal="true" aria-labelledby="vs-title">
       <div class="modal-header">
         <h2 class="modal-title" id="vs-title">👁 Submissions</h2>
         <button class="modal-close" onclick="closeViewSubmissionsModal(true)" aria-label="Close">✕</button>
@@ -263,5 +314,29 @@
 
   <script src="/assets/js/api.js"></script>
   <script src="/assets/js/dashboard.js"></script>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Reopen Challenge Modal (admin only)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="reopen-modal-overlay" class="modal-overlay" style="display:none;" onclick="closeReopenModal(event)">
+    <div class="modal-box" style="max-width:400px;" role="dialog" aria-modal="true" aria-labelledby="reopen-modal-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="reopen-modal-title">🔓 Reopen Challenge</h2>
+        <button class="modal-close" onclick="closeReopenModal(true)" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert" id="reopen-modal-alert"></div>
+        <p style="font-size:14px;color:#6b7280;margin-bottom:16px;">Set a new submission deadline to reopen this challenge.</p>
+        <div class="form-group">
+          <label class="form-label" for="reopen-date">New Deadline <span class="req">*</span></label>
+          <input id="reopen-date" type="date" class="form-input" required />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeReopenModal(true)">Cancel</button>
+          <button id="reopen-confirm-btn" class="btn btn-primary" onclick="confirmReopen()">🔓 Reopen</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

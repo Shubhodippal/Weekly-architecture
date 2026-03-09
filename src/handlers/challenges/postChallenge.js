@@ -1,6 +1,7 @@
 import { requireAuth } from "../../middleware/auth.js";
 import { requireAdmin } from "../../middleware/rbac.js";
 import { json } from "../../utils/response.js";
+import { sendNewChallengeEmail } from "../../utils/email.js";
 
 /**
  * POST /api/challenges
@@ -23,10 +24,12 @@ export async function handlePostChallenge(request, env) {
     return json({ success: false, message: "Expected multipart/form-data" }, 400);
   }
 
-  const title       = (formData.get("title") || "").trim();
-  const description = (formData.get("description") || "").trim();
-  const lastDate    = (formData.get("last_date") || "").trim();
-  const pdfFile     = formData.get("pdf");
+  const title              = (formData.get("title") || "").trim();
+  const description        = (formData.get("description") || "").trim();
+  const lastDate           = (formData.get("last_date") || "").trim();
+  const answerDescription  = (formData.get("answer_description") || "").trim();
+  const pdfFile            = formData.get("pdf");
+  const answerPdfFile      = formData.get("answer_pdf");
 
   // Validate required fields
   if (!title) {
@@ -47,23 +50,46 @@ export async function handlePostChallenge(request, env) {
     return json({ success: false, message: "PDF must be smaller than 20 MB" }, 400);
   }
 
-  // Generate a unique R2 key
+  // Validate optional answer PDF
+  if (answerPdfFile && typeof answerPdfFile !== "string") {
+    if (answerPdfFile.type && answerPdfFile.type !== "application/pdf") {
+      return json({ success: false, message: "Answer file must be a PDF" }, 400);
+    }
+    if (answerPdfFile.size > MAX_BYTES) {
+      return json({ success: false, message: "Answer PDF must be smaller than 20 MB" }, 400);
+    }
+  }
+
+  // Upload challenge PDF to R2
   const pdfKey  = `challenges/${crypto.randomUUID()}.pdf`;
   const pdfName = pdfFile.name || "challenge.pdf";
-
-  // Upload to R2
   const arrayBuf = await pdfFile.arrayBuffer();
   await env.R2.put(pdfKey, arrayBuf, {
     httpMetadata: { contentType: "application/pdf" },
     customMetadata: { originalName: pdfName },
   });
 
+  // Upload optional answer PDF to R2
+  let answerKey  = null;
+  let answerName = null;
+  if (answerPdfFile && typeof answerPdfFile !== "string" && answerPdfFile.size > 0) {
+    answerKey  = `answers/${crypto.randomUUID()}.pdf`;
+    answerName = answerPdfFile.name || "answer.pdf";
+    const answerBuf = await answerPdfFile.arrayBuffer();
+    await env.R2.put(answerKey, answerBuf, {
+      httpMetadata: { contentType: "application/pdf" },
+      customMetadata: { originalName: answerName },
+    });
+  }
+
   // Persist metadata to D1
   const result = await env.DB.prepare(
-    `INSERT INTO challenges (title, description, last_date, pdf_key, pdf_name, posted_by)
-     VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT INTO challenges (title, description, last_date, pdf_key, pdf_name, posted_by,
+                             answer_description, answer_key, answer_name)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(title, description || null, lastDate, pdfKey, pdfName, session.userId)
+    .bind(title, description || null, lastDate, pdfKey, pdfName, session.userId,
+          answerDescription || null, answerKey, answerName)
     .run();
 
   const challenge = await env.DB.prepare(
@@ -75,6 +101,26 @@ export async function handlePostChallenge(request, env) {
   )
     .bind(result.meta.last_row_id)
     .first();
+
+  // Notify all non-admin users via email (non-blocking)
+  try {
+    const { results: users } = await env.DB.prepare(
+      "SELECT name, email FROM users WHERE role = 'user'"
+    ).all();
+    await Promise.allSettled(
+      users.map((u) =>
+        sendNewChallengeEmail({
+          to:             u.email,
+          name:           u.name,
+          challengeTitle: challenge.title,
+          description:    challenge.description,
+          deadline:       challenge.last_date,
+        })
+      )
+    );
+  } catch (e) {
+    console.error("[postChallenge] notification emails failed:", e);
+  }
 
   return json({ success: true, message: "Challenge posted successfully", challenge }, 201);
 }

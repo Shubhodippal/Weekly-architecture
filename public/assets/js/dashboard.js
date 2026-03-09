@@ -92,10 +92,44 @@ function renderFeed(list) {
               ? `<button class="btn btn-ghost btn-sm" disabled>🔒 Closed</button>`
               : `<button class="btn btn-primary btn-sm submit-btn" data-id="${c.id}">✍️ Enter Solution</button>`)
           : `<button class="btn btn-outline btn-sm view-submissions-btn" data-id="${c.id}">👁 View Submissions</button>
+             <div class="accept-toggle ${expired ? 'accept-toggle--off' : 'accept-toggle--on'} accept-toggle-btn" data-id="${c.id}" title="${expired ? 'Click to reopen challenge' : 'Click to stop accepting responses'}" style="cursor:pointer;">
+               <div class="accept-toggle__track"></div>
+               <span class="accept-toggle__label">${expired ? 'Closed' : 'Accepting'}</span>
+             </div>
              <button class="btn btn-outline btn-sm edit-btn" data-id="${c.id}">✏️ Edit</button>
              <button class="btn btn-danger btn-sm del-btn" data-id="${c.id}">Delete</button>`
         }
       </div>
+
+      ${expired && (c.answer_description || c.has_answer) ? `
+      <div style="margin-top:14px;padding:14px 16px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;color:#7c3aed;margin-bottom:8px;">💡 Answer Revealed</div>
+        ${c.answer_description ? `<div style="font-size:14px;color:#374151;white-space:pre-wrap;margin-bottom:10px;">${esc(c.answer_description)}</div>` : ""}
+        ${c.has_answer ? `
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm toggle-answer-btn" data-id="${c.id}">📋 View Answer PDF</button>
+            <a href="/api/challenges/${c.id}/answer" class="btn btn-ghost btn-sm" download="${esc(c.answer_name || 'answer.pdf')}">⬇ Download Answer</a>
+          </div>
+          <div class="pdf-inline-viewer" id="answer-viewer-${c.id}" style="display:none;margin-top:10px;">
+            <iframe src="/api/challenges/${c.id}/answer?inline=1" class="pdf-iframe" title="Answer" loading="lazy"></iframe>
+          </div>` : ""}
+      </div>` : ""}
+
+      ${!isAdmin && c.my_grade ? (() => {
+        const gradeLabels = { wrong: "Wrong", partial: "Partially Correct", almost: "Almost Correct", correct: "Correct", not_attempted: "Not Attempted" };
+        const gradeClasses = { wrong: "grade-badge--wrong", partial: "grade-badge--partial", almost: "grade-badge--almost", correct: "grade-badge--correct", not_attempted: "grade-badge--not_attempted" };
+        const pts = c.my_points;
+        const ptsColor = pts > 0 ? "#059669" : pts < 0 ? "#dc2626" : "#d97706";
+        return `
+        <div style="margin-top:12px;padding:12px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;">
+          <div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:8px;">📊 Your Evaluation</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="grade-badge ${gradeClasses[c.my_grade] || ''}">${gradeLabels[c.my_grade] || c.my_grade}</span>
+            <span class="pts-badge" style="color:${ptsColor};">${pts > 0 ? '+' : ''}${pts} pts</span>
+          </div>
+          ${c.my_remark ? `<div style="margin-top:8px;font-size:13px;color:#374151;white-space:pre-wrap;border-top:1px solid #e0f2fe;padding-top:8px;"><span style="font-weight:600;color:#0369a1;">💬 Remark:</span> ${esc(c.my_remark)}</div>` : ""}
+        </div>`;
+      })() : ""}
 
       <div class="pdf-inline-viewer" id="pdf-viewer-${c.id}" style="display:none;">
         <iframe
@@ -115,6 +149,37 @@ function renderFeed(list) {
       const open   = viewer.style.display === "none";
       viewer.style.display = open ? "block" : "none";
       btn.textContent = open ? "✖ Close PDF" : "📄 View PDF";
+    });
+  });
+
+  el.querySelectorAll(".toggle-answer-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const viewer = document.getElementById(`answer-viewer-${btn.dataset.id}`);
+      const open   = viewer.style.display === "none";
+      viewer.style.display = open ? "block" : "none";
+      btn.textContent = open ? "✖ Close Answer" : "📋 View Answer PDF";
+    });
+  });
+
+  el.querySelectorAll(".accept-toggle-btn").forEach((tog) => {
+    tog.addEventListener("click", async () => {
+      const id    = tog.dataset.id;
+      const isOn  = tog.classList.contains("accept-toggle--on");
+      if (isOn) {
+        // ON → OFF: expire immediately
+        if (!confirm("Stop accepting responses? This will close the challenge immediately and reveal the answer to users.")) return;
+        tog.style.opacity = "0.5"; tog.style.pointerEvents = "none";
+        const res = await api.expireChallenge(id).catch(() => null);
+        tog.style.opacity = ""; tog.style.pointerEvents = "";
+        if (res?.success) {
+          await loadChallenges();
+        } else {
+          alert(res?.message || "Failed to close challenge.");
+        }
+      } else {
+        // OFF → ON: open reopen modal to pick new deadline
+        openReopenModal(id);
+      }
     });
   });
 
@@ -214,9 +279,28 @@ let editingChallengeId = null;
 
 function openEditModal(challenge) {
   editingChallengeId = challenge.id;
-  document.getElementById("e-title").value = challenge.title || "";
-  document.getElementById("e-desc").value  = challenge.description || "";
-  document.getElementById("e-date").value  = challenge.last_date || "";
+  document.getElementById("e-title").value        = challenge.title || "";
+  document.getElementById("e-desc").value         = challenge.description || "";
+  document.getElementById("e-date").value         = challenge.last_date || "";
+  document.getElementById("e-answer-desc").value  = challenge.answer_description || "";
+  document.getElementById("e-remove-answer").value = "0";
+
+  // Show current answer file if present
+  const answerRow = document.getElementById("e-current-answer");
+  if (challenge.answer_name) {
+    document.getElementById("e-current-answer-name").textContent = `📋 ${challenge.answer_name}`;
+    answerRow.style.display = "flex";
+  } else {
+    answerRow.style.display = "none";
+  }
+
+  // Reset answer drop zone
+  const eAnswerPdf = document.getElementById("e-answer-pdf");
+  eAnswerPdf.value = "";
+  eAnswerPdf._file = null;
+  document.getElementById("e-answer-drop-label").textContent = "Click or drag & drop new answer PDF here";
+  document.getElementById("e-answer-drop-zone").classList.remove("drop-zone--selected");
+
   document.getElementById("edit-modal-alert").className   = "alert";
   document.getElementById("edit-modal-alert").textContent = "";
   document.getElementById("edit-modal-overlay").style.display = "flex";
@@ -235,12 +319,100 @@ function closeEditModal(force) {
 window.openEditModal  = openEditModal;
 window.closeEditModal = closeEditModal;
 
+// ── Edit modal: answer PDF drop zone & remove button ─────────────────────
+const eAnswerDropZone  = document.getElementById("e-answer-drop-zone");
+const eAnswerPdfInput  = document.getElementById("e-answer-pdf");
+const eAnswerDropLabel = document.getElementById("e-answer-drop-label");
+
+eAnswerDropZone.addEventListener("dragover",  (e) => { e.preventDefault(); eAnswerDropZone.classList.add("drop-zone--hover"); });
+eAnswerDropZone.addEventListener("dragleave", () => eAnswerDropZone.classList.remove("drop-zone--hover"));
+eAnswerDropZone.addEventListener("drop", (e) => {
+  e.preventDefault(); eAnswerDropZone.classList.remove("drop-zone--hover");
+  const file = e.dataTransfer.files[0];
+  if (file) setEditAnswerFile(file);
+});
+eAnswerPdfInput.addEventListener("change", () => { if (eAnswerPdfInput.files[0]) setEditAnswerFile(eAnswerPdfInput.files[0]); });
+
+function setEditAnswerFile(file) {
+  if (!file || file.type !== "application/pdf") {
+    const alertEl = document.getElementById("edit-modal-alert");
+    alertEl.textContent = "Answer file must be a PDF.";
+    alertEl.className = "alert alert-error show";
+    return;
+  }
+  eAnswerPdfInput._file = file;
+  eAnswerDropLabel.textContent = `✅ ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+  eAnswerDropZone.classList.add("drop-zone--selected");
+  // Clear any pending "remove" flag since we're uploading a new file
+  document.getElementById("e-remove-answer").value = "0";
+}
+
+document.getElementById("e-remove-answer-btn").addEventListener("click", () => {
+  document.getElementById("e-remove-answer").value = "1";
+  document.getElementById("e-current-answer").style.display = "none";
+  // Also clear any newly selected file
+  eAnswerPdfInput.value = ""; eAnswerPdfInput._file = null;
+  eAnswerDropLabel.textContent = "Click or drag & drop new answer PDF here";
+  eAnswerDropZone.classList.remove("drop-zone--selected");
+});
+
+// ── Reopen Challenge Modal ──────────────────────────────────────────────────
+let reopenChallengeId = null;
+
+function openReopenModal(challengeId) {
+  reopenChallengeId = challengeId;
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const dateInput = document.getElementById("reopen-date");
+  dateInput.min   = tomorrow;
+  dateInput.value = "";
+  const alertEl = document.getElementById("reopen-modal-alert");
+  alertEl.className   = "alert";
+  alertEl.textContent = "";
+  document.getElementById("reopen-modal-overlay").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function closeReopenModal(force) {
+  if (force === true || (force instanceof Event && force.target === document.getElementById("reopen-modal-overlay"))) {
+    document.getElementById("reopen-modal-overlay").style.display = "none";
+    document.body.style.overflow = "";
+    reopenChallengeId = null;
+  }
+}
+
+async function confirmReopen() {
+  const date    = document.getElementById("reopen-date").value;
+  const alertEl = document.getElementById("reopen-modal-alert");
+  if (!date) {
+    alertEl.className   = "alert alert-error show";
+    alertEl.textContent = "Please pick a deadline.";
+    return;
+  }
+  const btn = document.getElementById("reopen-confirm-btn");
+  btn.disabled    = true;
+  btn.textContent = "Reopening…";
+  const res = await api.reopenChallenge(reopenChallengeId, date).catch(() => null);
+  btn.disabled    = false;
+  btn.textContent = "🔓 Reopen";
+  if (!res?.success) {
+    alertEl.className   = "alert alert-error show";
+    alertEl.textContent = res?.message || "Failed to reopen.";
+    return;
+  }
+  closeReopenModal(true);
+  await loadChallenges();
+}
+
+window.closeReopenModal = closeReopenModal;
+window.confirmReopen    = confirmReopen;
+
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     closePostModal(true);
     closeEditModal(true);
     closeSubmitModal(true);
     closeViewSubmissionsModal(true);
+    closeReopenModal(true);
   }
 });
 
@@ -249,9 +421,13 @@ document.getElementById("edit-challenge-form").addEventListener("submit", async 
   const alertEl = document.getElementById("edit-modal-alert");
   alertEl.className = "alert"; alertEl.textContent = "";
 
-  const title   = document.getElementById("e-title").value.trim();
-  const desc    = document.getElementById("e-desc").value.trim();
-  const date    = document.getElementById("e-date").value;
+  const title      = document.getElementById("e-title").value.trim();
+  const desc       = document.getElementById("e-desc").value.trim();
+  const date       = document.getElementById("e-date").value;
+  const answerDesc = document.getElementById("e-answer-desc").value.trim();
+  const removeAns  = document.getElementById("e-remove-answer").value;
+  const eAnswerPdf = document.getElementById("e-answer-pdf");
+  const answerFile = eAnswerPdf._file || eAnswerPdf.files[0];
 
   if (!title) { alertEl.className = "alert alert-error show"; alertEl.textContent = "Title is required."; return; }
   if (!date)  { alertEl.className = "alert alert-error show"; alertEl.textContent = "Deadline is required."; return; }
@@ -259,9 +435,15 @@ document.getElementById("edit-challenge-form").addEventListener("submit", async 
   const btn = document.getElementById("edit-submit-btn");
   btn.disabled = true; btn.textContent = "Saving…";
 
-  const res = await api.editChallenge(editingChallengeId, {
-    title, description: desc, last_date: date,
-  }).catch(() => null);
+  const fd = new FormData();
+  fd.append("title", title);
+  fd.append("description", desc);
+  fd.append("last_date", date);
+  fd.append("answer_description", answerDesc);
+  if (removeAns === "1") fd.append("remove_answer_pdf", "1");
+  if (answerFile) fd.append("answer_pdf", answerFile, answerFile.name);
+
+  const res = await api.editChallenge(editingChallengeId, fd).catch(() => null);
 
   btn.disabled = false; btn.textContent = "Save Changes";
 
@@ -275,7 +457,15 @@ document.getElementById("edit-challenge-form").addEventListener("submit", async 
   const idx = allChallenges.findIndex((c) => String(c.id) === String(editingChallengeId));
   if (idx !== -1) {
     const now = new Date().toISOString().slice(0, 10);
-    allChallenges[idx] = { ...allChallenges[idx], ...res.challenge, is_expired: res.challenge.last_date < now };
+    const isExp = res.challenge.last_date < now;
+    allChallenges[idx] = {
+      ...allChallenges[idx],
+      ...res.challenge,
+      is_expired:         isExp,
+      answer_description: isExp ? res.challenge.answer_description : null,
+      answer_name:        isExp ? res.challenge.answer_name        : null,
+      has_answer:         isExp ? !!res.challenge.answer_name      : false,
+    };
   }
   closeEditModal(true);
   applyFilter();
@@ -304,6 +494,28 @@ dropZone.addEventListener("drop", (e) => {
 });
 pdfInput.addEventListener("change", () => { if (pdfInput.files[0]) setFile(pdfInput.files[0]); });
 
+// ── Answer PDF drag & drop for post modal ────────────────────────────────
+const answerDropZone  = document.getElementById("answer-drop-zone");
+const answerPdfInput  = document.getElementById("c-answer-pdf");
+const answerDropLabel = document.getElementById("answer-drop-label");
+
+function setAnswerFile(file) {
+  if (!file || file.type !== "application/pdf") {
+    modalAlert("Answer file must be a PDF.", "error"); return;
+  }
+  answerPdfInput._file = file;
+  answerDropLabel.textContent = `✅ ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+  answerDropZone.classList.add("drop-zone--selected");
+}
+
+answerDropZone.addEventListener("dragover", (e) => { e.preventDefault(); answerDropZone.classList.add("drop-zone--hover"); });
+answerDropZone.addEventListener("dragleave", () => answerDropZone.classList.remove("drop-zone--hover"));
+answerDropZone.addEventListener("drop", (e) => {
+  e.preventDefault(); answerDropZone.classList.remove("drop-zone--hover");
+  if (e.dataTransfer.files[0]) setAnswerFile(e.dataTransfer.files[0]);
+});
+answerPdfInput.addEventListener("change", () => { if (answerPdfInput.files[0]) setAnswerFile(answerPdfInput.files[0]); });
+
 // ── Modal form helpers ────────────────────────────────────────────────────
 function modalAlert(msg, type = "error") {
   const el = document.getElementById("modal-alert");
@@ -320,10 +532,12 @@ document.getElementById("challenge-form").addEventListener("submit", async (e) =
   clearModalAlert();
   document.getElementById("modal-success").style.display = "none";
 
-  const title = document.getElementById("c-title").value.trim();
-  const desc  = document.getElementById("c-desc").value.trim();
-  const date  = document.getElementById("c-date").value;
-  const file  = pdfInput._file || pdfInput.files[0];
+  const title      = document.getElementById("c-title").value.trim();
+  const desc       = document.getElementById("c-desc").value.trim();
+  const date       = document.getElementById("c-date").value;
+  const file       = pdfInput._file || pdfInput.files[0];
+  const answerDesc = document.getElementById("c-answer-desc").value.trim();
+  const answerFile = answerPdfInput._file || answerPdfInput.files[0];
 
   if (!title) return modalAlert("Title is required.");
   if (!date)  return modalAlert("Deadline is required.");
@@ -334,6 +548,8 @@ document.getElementById("challenge-form").addEventListener("submit", async (e) =
   fd.append("description", desc);
   fd.append("last_date", date);
   fd.append("pdf", file, file.name);
+  if (answerDesc) fd.append("answer_description", answerDesc);
+  if (answerFile) fd.append("answer_pdf", answerFile, answerFile.name);
 
   const btn     = document.getElementById("submit-btn");
   const spinner = document.getElementById("submit-spinner");
@@ -364,6 +580,9 @@ document.getElementById("challenge-form").addEventListener("submit", async (e) =
   pdfInput._file = null;
   dropLabel.textContent = "Click or drag & drop PDF here";
   dropZone.classList.remove("drop-zone--selected");
+  answerPdfInput._file = null;
+  answerDropLabel.textContent = "Click or drag & drop answer PDF here";
+  answerDropZone.classList.remove("drop-zone--selected");
 
   // Reload challenges and close modal after brief pause
   await loadChallenges();
@@ -407,6 +626,13 @@ async function loadChallenges() {
   roleBadge.className   = `badge badge-${role}`;
   document.getElementById("user-last-login").textContent = fmtDate(last_login);
   document.getElementById("user-joined").textContent     = fmtDate(created_at);
+
+  // Points widget (non-admin users)
+  if (role !== "admin" && me.user.total_points !== undefined) {
+    const ptEl = document.getElementById("user-points");
+    ptEl.style.display = "block";
+    document.getElementById("points-value").textContent = me.user.total_points;
+  }
 
   // Set min date for new challenges
   document.getElementById("c-date").min = new Date().toISOString().slice(0, 10);
@@ -562,7 +788,18 @@ window.deleteMySubmission = deleteMySubmission;
 // ══════════════════════════════════════════════════════════════════════════
 // View Submissions Modal (admin)
 // ══════════════════════════════════════════════════════════════════════════
+let vsCurrentChallengeId = null;
+
+const GRADE_LABELS = {
+  wrong:        "Wrong",
+  partial:      "Partially Correct",
+  almost:       "Almost Correct",
+  correct:      "Correct",
+  not_attempted:"Not Attempted",
+};
+
 async function openViewSubmissionsModal(challengeId) {
+  vsCurrentChallengeId = challengeId;
   const listEl = document.getElementById("vs-list");
   listEl.innerHTML = `<p style="color:#9ca3af;text-align:center;">Loading…</p>`;
   document.getElementById("view-submissions-overlay").style.display = "flex";
@@ -582,24 +819,109 @@ async function openViewSubmissionsModal(challengeId) {
     return;
   }
 
-  listEl.innerHTML = res.submissions.map((s) => `
-    <div class="vs-item">
+  listEl.innerHTML = res.submissions.map((s) => {
+    const isNA = s.grade === "not_attempted";
+
+    const badgeHtml = s.grade && !isNA
+      ? `<span class="grade-badge grade-badge--${s.grade}">${GRADE_LABELS[s.grade]}</span>
+         <span class="pts-badge" style="color:${s.points > 0 ? "#059669" : s.points < 0 ? "#dc2626" : "#d97706"};">
+           ${s.points > 0 ? "+" : ""}${s.points} pts
+         </span>`
+      : "";
+
+    const gradeOpt = (val, label) =>
+      `<option value="${val}" ${s.grade === val ? "selected" : ""}>${label}</option>`;
+
+    return `
+    <div class="vs-item" data-submission-id="${s.id}">
       <div class="vs-item__header">
         <div class="vs-item__avatar">${esc(s.user_name.charAt(0).toUpperCase())}</div>
         <div class="vs-item__meta">
           <strong>${esc(s.user_name)}</strong>
           <span class="vs-item__email">${esc(s.user_email)}</span>
         </div>
-        <div class="vs-item__date">Submitted ${fmtDate(s.submitted_at)}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;">
+          ${isNA
+            ? `<span class="grade-badge grade-badge--not_attempted">Did Not Submit</span>
+               <span class="pts-badge" style="color:#dc2626;">−10 pts</span>`
+            : `${badgeHtml}<span class="vs-item__date">${fmtDate(s.submitted_at)}</span>`}
+        </div>
       </div>
-      ${s.solution_text
-        ? `<div class="vs-item__text">${esc(s.solution_text)}</div>`
-        : `<em style="color:#9ca3af;">No text solution.</em>`}
-      ${s.has_file
-        ? `<a href="/api/submissions/${s.id}/file" target="_blank" class="btn btn-outline btn-sm" style="margin-top:8px;">📎 ${esc(s.file_name || "View file")}</a>`
-        : ""}
-    </div>
-  `).join('<hr class="vs-divider" />');
+
+      ${isNA ? "" : `
+        ${s.solution_text
+          ? `<div class="vs-item__text">${esc(s.solution_text)}</div>`
+          : `<em style="color:#9ca3af;font-size:13px;">No text solution provided.</em>`}
+        ${s.has_file
+          ? `<a href="/api/submissions/${s.id}/file" target="_blank" class="btn btn-outline btn-sm" style="margin-top:8px;">📎 ${esc(s.file_name || "View file")}</a>`
+          : ""}
+
+        <div class="grade-panel">
+          <div class="grade-panel__row">
+            <label>Grade</label>
+            <select class="grade-select form-input" style="max-width:240px;font-size:13px;">
+              <option value="">— Select grade —</option>
+              ${gradeOpt("wrong",   "❌ Wrong (0 pts)")}
+              ${gradeOpt("partial", "🔶 Partially Correct (5 pts)")}
+              ${gradeOpt("almost",  "🔷 Almost Correct (15 pts)")}
+              ${gradeOpt("correct", "✅ Correct (20 pts)")}
+            </select>
+          </div>
+          <div class="grade-panel__row">
+            <label>Remark</label>
+            <textarea class="grade-remark form-input" rows="2" placeholder="Optional remarks for the user…" style="font-size:13px;">${esc(s.remark || "")}</textarea>
+          </div>
+          <div class="grade-panel__actions">
+            ${s.evaluated_at ? `<span style="font-size:11px;color:#9ca3af;">Last evaluated ${fmtDate(s.evaluated_at)}</span>` : ""}
+            <button class="btn btn-primary btn-sm grade-save-btn">💾 Save Grade</button>
+          </div>
+          <div class="grade-alert" style="display:none;margin-top:8px;"></div>
+        </div>
+      `}
+    </div>`;
+  }).join('<hr class="vs-divider" />');
+
+  // Attach grade-save handlers
+  listEl.querySelectorAll(".grade-save-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const item    = btn.closest(".vs-item");
+      const subId   = item.dataset.submissionId;
+      const grade   = item.querySelector(".grade-select").value;
+      const remark  = item.querySelector(".grade-remark").value.trim();
+      const alertEl = item.querySelector(".grade-alert");
+
+      alertEl.style.display = "none";
+      if (!grade) {
+        alertEl.style.display = "block";
+        alertEl.className = "grade-alert";
+        alertEl.style.background = "#fee2e2";
+        alertEl.style.color = "#dc2626";
+        alertEl.textContent = "Please select a grade before saving.";
+        return;
+      }
+
+      btn.disabled = true; btn.textContent = "Saving…";
+      const res = await api.gradeSubmission(subId, grade, remark).catch(() => null);
+      btn.disabled = false; btn.textContent = "💾 Save Grade";
+
+      if (!res?.success) {
+        alertEl.style.display = "block";
+        alertEl.style.background = "#fee2e2";
+        alertEl.style.color = "#dc2626";
+        alertEl.textContent = res?.message || "Failed to save grade.";
+        return;
+      }
+
+      const pts = res.points;
+      alertEl.style.display = "block";
+      alertEl.style.background = "#d1fae5";
+      alertEl.style.color = "#065f46";
+      alertEl.textContent = `✅ Graded: ${GRADE_LABELS[grade]} (${pts >= 0 ? "+" : ""}${pts} pts). Email sent to user.`;
+
+      // Refresh list after short delay to show updated badges
+      setTimeout(() => openViewSubmissionsModal(vsCurrentChallengeId), 1400);
+    });
+  });
 }
 
 function closeViewSubmissionsModal(force) {
