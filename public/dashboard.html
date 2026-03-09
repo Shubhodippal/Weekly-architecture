@@ -25,6 +25,9 @@
       <a href="/admin.html" id="btn-manage-users" class="btn btn-outline btn-sm" style="display:none;">
         👥 Users
       </a>
+      <a href="/admin-rewards.html" id="btn-rewards" class="btn btn-outline btn-sm" style="display:none;">
+        🎁 Rewards
+      </a>
       <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
     </div>
   </nav>
@@ -60,6 +63,12 @@
           <div class="ps-points__value" id="points-value">0</div>
           <div class="ps-points__label">🎯 total points</div>
         </div>
+
+        <!-- My Rewards ladder (non-admin, hidden until loaded) -->
+        <div id="rewards-sidebar-wrapper" style="display:none;margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px;">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">🎁 My Rewards</div>
+          <div id="rewards-sidebar-list"><!-- populated by JS --></div>
+        </div>
         <div class="ps-meta">
           <div>🕐 <span id="user-last-login">—</span></div>
           <div>📅 <span id="user-joined">—</span></div>
@@ -74,6 +83,9 @@
         </button>
         <a href="/admin.html" class="sidebar-link">
           👥 User Management
+        </a>
+        <a href="/admin-rewards.html" class="sidebar-link">
+          🎁 Reward System
         </a>
       </div>
     </aside>
@@ -314,6 +326,38 @@
 
   <script src="/assets/js/api.js"></script>
   <script src="/assets/js/dashboard.js"></script>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Reward Surprise Popup
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="reward-popup-overlay" class="modal-overlay reward-popup-overlay" style="display:none;">
+    <div class="reward-popup" role="dialog" aria-modal="true" aria-label="Reward unlocked">
+      <div class="reward-confetti" id="reward-confetti"></div>
+
+      <!-- Before reveal -->
+      <div id="reward-before">
+        <div class="reward-gif-icon" id="reward-bounce-icon">🎁</div>
+        <div class="reward-popup__tease">You've earned a reward!</div>
+        <p style="font-size:14px;color:#64748b;margin:0 0 8px;">Keep it a surprise or tap to reveal what you won!</p>
+        <div id="reward-next-hint-before" style="font-size:12px;color:#94a3b8;margin-bottom:18px;"></div>
+        <button class="btn btn-primary reward-reveal-btn" onclick="revealReward()">✨ Tap to Reveal</button>
+        <button class="btn btn-ghost" style="font-size:12px;margin-top:8px;display:block;width:100%;" onclick="doPassReward()">💾 Save — I'm holding out for something bigger</button>
+      </div>
+
+      <!-- After reveal -->
+      <div id="reward-after" style="display:none;">
+        <div class="reward-popup__icon" id="reward-icon">🎁</div>
+        <div class="reward-popup__title" id="reward-title">Reward!</div>
+        <div class="reward-popup__desc"  id="reward-desc"></div>
+        <div class="reward-popup__pts"   id="reward-pts"></div>
+        <div id="reward-next-hint-after" style="font-size:12px;color:#94a3b8;margin:6px 0 14px;"></div>
+        <div class="reward-popup__actions">
+          <button class="btn btn-primary" id="reward-claim-btn" style="font-size:15px;padding:12px 24px;" onclick="doClaimReward()">🎁 Claim Reward!</button>
+          <button class="btn btn-ghost"   id="reward-save-btn" style="font-size:13px;" onclick="doPassReward()">💾 Save for bigger reward</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ══════════════════════════════════════════════════════════════════════
        Reopen Challenge Modal (admin only)

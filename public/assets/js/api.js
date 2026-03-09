@@ -48,6 +48,14 @@ const api = {
     return apiFetch(`/api/admin/users/${id}`, { method: "DELETE" });
   },
 
+  /** PATCH /api/admin/users/:id/points */
+  adjustPoints(id, points, reason) {
+    return apiFetch(`/api/admin/users/${id}/points`, {
+      method: "PATCH",
+      body: JSON.stringify({ points, reason }),
+    });
+  },
+
   /** POST /api/challenges (multipart) */
   postChallenge(formData) {
     return fetch("/api/challenges", { method: "POST", body: formData, credentials: "include" }).then(r => r.json());
@@ -115,5 +123,52 @@ const api = {
       method: "PATCH",
       body: JSON.stringify({ grade, remark }),
     });
+  },
+
+  // ── Rewards (user) ───────────────────────────────────────────────────────
+
+  /** GET /api/rewards */
+  listRewards() {
+    return apiFetch("/api/rewards");
+  },
+
+  /** POST /api/rewards/:id/claim */
+  claimReward(id) {
+    return apiFetch(`/api/rewards/${id}/claim`, { method: "POST" });
+  },
+
+  /** POST /api/rewards/:id/pass */
+  passReward(id) {
+    return apiFetch(`/api/rewards/${id}/pass`, { method: "POST" });
+  },
+
+  // ── Rewards (admin) ──────────────────────────────────────────────────────
+
+  /** GET /api/admin/rewards/tiers */
+  adminListRewardTiers() {
+    return apiFetch("/api/admin/rewards/tiers");
+  },
+
+  /** PATCH /api/admin/rewards/tiers/:id */
+  adminUpdateRewardTier(id, data) {
+    return apiFetch(`/api/admin/rewards/tiers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** GET /api/admin/rewards/claims?status=claimed|fulfilled|all */
+  adminListClaims(status = "claimed") {
+    return apiFetch(`/api/admin/rewards/claims?status=${status}`);
+  },
+
+  /** PATCH /api/admin/rewards/claims/:id/fulfill */
+  adminFulfillClaim(id) {
+    return apiFetch(`/api/admin/rewards/claims/${id}/fulfill`, { method: "PATCH" });
+  },
+
+  /** PATCH /api/admin/rewards/claims/:id/reject */
+  adminRejectClaim(id) {
+    return apiFetch(`/api/admin/rewards/claims/${id}/reject`, { method: "PATCH" });
   },
 };

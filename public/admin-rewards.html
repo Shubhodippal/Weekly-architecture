@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reward System — Challenge Accepted</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/style.css" />
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="/dashboard.html" class="topbar__logo">🎯 Challenge Accepted</a>
+    <div class="topbar__right">
+      <a href="/dashboard.html" class="btn btn-ghost btn-sm">Dashboard</a>
+      <a href="/admin.html"     class="btn btn-ghost btn-sm">👥 Users</a>
+      <span class="topbar__user" style="font-size:13px;">
+        <strong id="topbar-name">…</strong>
+        <span class="badge badge-admin" style="margin-left:6px;">Admin</span>
+      </span>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- Skeleton -->
+  <div id="skeleton" class="container" style="padding-top:32px;">
+    <div style="background:#e2e8f0;height:80px;border-radius:10px;margin-bottom:16px;animation:pulse 1.4s infinite alternate;"></div>
+    <div style="background:#e2e8f0;height:300px;border-radius:10px;animation:pulse 1.4s infinite alternate;"></div>
+    <style>@keyframes pulse{from{opacity:.6}to{opacity:1}}</style>
+  </div>
+
+  <!-- Main content -->
+  <div id="content" style="display:none;">
+    <div class="container" style="padding-top:32px;max-width:960px;">
+
+      <!-- Page header -->
+      <div class="section-header" style="margin-bottom:28px;">
+        <div>
+          <div class="section-title">🎁 Reward System</div>
+          <div class="section-sub">Manage reward tiers and fulfil player claims</div>
+        </div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="stats-grid" style="margin-bottom:32px;">
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-tiers">—</div>
+          <div class="stat-card__label">Reward Tiers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-pending" style="color:#f59e0b;">—</div>
+          <div class="stat-card__label">Pending Claims</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-fulfilled" style="color:#059669;">—</div>
+          <div class="stat-card__label">Fulfilled</div>
+        </div>
+      </div>
+
+      <!-- ── PENDING CLAIMS ─────────────────────────────────────────── -->
+      <div class="section-header" style="margin-bottom:12px;">
+        <div class="section-title" style="font-size:16px;">⏳ Pending Claims</div>
+        <button class="btn btn-outline btn-sm" onclick="loadClaims('claimed')">Refresh</button>
+      </div>
+
+      <div class="alert" id="claims-alert" style="display:none;"></div>
+
+      <div class="table-wrap" style="margin-bottom:40px;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Reward</th>
+              <th>Claimed At</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="claims-body">
+            <tr><td colspan="4" style="text-align:center;color:#6b7280;padding:40px;"><span class="spinner"></span> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── FULFILLED HISTORY ──────────────────────────────────────── -->
+      <div class="section-header" style="margin-bottom:12px;">
+        <div class="section-title" style="font-size:16px;">✅ Fulfilled History</div>
+        <button class="btn btn-ghost btn-sm" onclick="toggleFulfilled()" id="toggle-fulfilled-btn">Show</button>
+      </div>
+      <div id="fulfilled-section" style="display:none;margin-bottom:40px;">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>User</th><th>Reward</th><th>Claimed At</th><th>Fulfilled At</th><th>Points Deducted</th></tr>
+            </thead>
+            <tbody id="fulfilled-body">
+              <tr><td colspan="4" style="text-align:center;color:#6b7280;padding:40px;">Click "Show" to load</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── REWARD TIERS ───────────────────────────────────────────── -->
+      <div class="section-header" style="margin-bottom:12px;">
+        <div class="section-title" style="font-size:16px;">🏅 Reward Tiers</div>
+        <span style="font-size:12px;color:#94a3b8;">Click a tier to edit it</span>
+      </div>
+
+      <div class="table-wrap" style="margin-bottom:48px;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Icon</th>
+              <th>Title</th>
+              <th>Description</th>
+              <th>Points Required</th>
+              <th>Status</th>
+              <th>Edit</th>
+            </tr>
+          </thead>
+          <tbody id="tiers-body">
+            <tr><td colspan="6" style="text-align:center;color:#6b7280;padding:40px;"><span class="spinner"></span> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       Edit Tier Modal
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="edit-tier-overlay" class="modal-overlay" style="display:none;" onclick="closeEditTier(event)">
+    <div class="modal-box" style="max-width:460px;" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 class="modal-title">✏️ Edit Reward Tier</h2>
+        <button class="modal-close" onclick="closeEditTier(true)" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert" id="edit-tier-alert"></div>
+        <input type="hidden" id="edit-tier-id" />
+
+        <div class="form-group">
+          <label class="form-label">Icon (emoji) <span class="req">*</span></label>
+          <input id="et-icon" type="text" class="form-input" placeholder="e.g. 🍫" maxlength="8" style="font-size:22px;text-align:center;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Title <span class="req">*</span></label>
+          <input id="et-title" type="text" class="form-input" placeholder="Reward name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="et-desc" class="form-input" rows="2" placeholder="Short description shown to users" style="resize:vertical;"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Points Required <span class="req">*</span></label>
+          <input id="et-pts" type="number" class="form-input" min="1" placeholder="e.g. 100" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <input id="et-active" type="checkbox" style="width:16px;height:16px;" />
+            Active (visible to users)
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeEditTier(true)">Cancel</button>
+          <button id="save-tier-btn" class="btn btn-primary" onclick="saveTier()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/admin-rewards.js"></script>
+</body>
+</html>

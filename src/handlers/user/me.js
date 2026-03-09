@@ -7,7 +7,11 @@ export async function handleMe(request, env) {
 
   const user = await env.DB.prepare(
     `SELECT id, name, email, role, last_login, created_at,
-            (SELECT COALESCE(SUM(points), 0) FROM submissions WHERE user_id = users.id) AS total_points
+            (
+              COALESCE((SELECT SUM(points) FROM submissions WHERE user_id = users.id), 0)
+              + COALESCE((SELECT SUM(points) FROM bonus_points WHERE user_id = users.id), 0)
+              - COALESCE((SELECT SUM(points_consumed) FROM user_rewards WHERE user_id = users.id), 0)
+            ) AS total_points
      FROM users WHERE id = ?`
   )
     .bind(session.userId)

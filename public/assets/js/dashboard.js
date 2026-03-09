@@ -1,8 +1,10 @@
 ﻿/* ── Unified home dashboard (challenges feed + admin modal) ─────────────── */
 
 // ── Globals ───────────────────────────────────────────────────────────────
-let allChallenges = [];
-let currentUser   = null;
+let allChallenges   = [];
+let currentUser     = null;
+let pendingUnlocks  = [];   // reward unlocks not yet acted on
+let unlockQueueIdx  = 0;    // which pending unlock we're showing
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function fmtDate(d) {
@@ -413,6 +415,7 @@ document.addEventListener("keydown", (e) => {
     closeSubmitModal(true);
     closeViewSubmissionsModal(true);
     closeReopenModal(true);
+    closeRewardPopup();
   }
 });
 
@@ -598,6 +601,211 @@ async function loadChallenges() {
   refreshStats();
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// Reward System
+// ══════════════════════════════════════════════════════════════════════════
+
+const REWARD_STATUS_ICON = {
+  locked:    "🔒",
+  unlocked:  "✨",
+  claimed:   "⏳",
+  passed:    "⏭",
+  fulfilled: "✅",
+};
+const REWARD_STATUS_LABEL = {
+  locked:    "Locked",
+  unlocked:  "Ready to claim!",
+  claimed:   "Pending…",
+  passed:    "Skipped",
+  fulfilled: "Fulfilled ✅",
+};
+const REWARD_STATUS_COLOR = {
+  locked:    "#94a3b8",
+  unlocked:  "#f59e0b",
+  claimed:   "#3b82f6",
+  passed:    "#cbd5e1",
+  fulfilled: "#059669",
+};
+
+async function loadRewards() {
+  const res = await api.listRewards().catch(() => null);
+  if (!res?.success) return;
+
+  // Store full list globally so popup can reference next tiers
+  window._allRewards = res.rewards;
+
+  renderRewardsSidebar(res.rewards);
+
+  pendingUnlocks = res.new_unlocks || [];
+  unlockQueueIdx = 0;
+  if (pendingUnlocks.length > 0) {
+    // Small delay so the page finishes rendering first
+    setTimeout(showNextRewardPopup, 800);
+  }
+}
+
+function renderRewardsSidebar(rewards) {
+  const wrapper = document.getElementById("rewards-sidebar-wrapper");
+  const list    = document.getElementById("rewards-sidebar-list");
+  if (!wrapper || !list) return;
+
+  if (!rewards || !rewards.length) return;
+
+  wrapper.style.display = "block";
+  list.innerHTML = rewards.map((r) => {
+    const locked  = r.status === "locked";
+    const isPassed = r.status === "passed";
+    return `
+    <div class="reward-tier-row reward-tier-row--${r.status}">
+      <div class="reward-tier-row__icon">${locked ? "🔒" : esc(r.icon)}</div>
+      <div class="reward-tier-row__info">
+        <div class="reward-tier-row__name${locked ? " reward-tier-row__name--blur" : ""}">${locked ? "Hidden reward" : esc(r.title)}</div>
+        <div class="reward-tier-row__pts">${locked ? `🔒 Unlock at ${r.points_required} pts` : `${r.points_required} pts`}</div>
+        ${isPassed ? `<button class="reward-reclaim-btn" onclick="doClaimPassedReward(${r.id}, this)">😬 Still want it? Claim now</button>` : ""}
+      </div>
+      <div class="reward-tier-row__status" style="color:${REWARD_STATUS_COLOR[r.status] || "#94a3b8"};" title="${REWARD_STATUS_LABEL[r.status] || ""}">
+        ${locked ? "" : (REWARD_STATUS_ICON[r.status] || "")}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Surprise popup ────────────────────────────────────────────────────────
+
+function spawnConfetti() {
+  const container = document.getElementById("reward-confetti");
+  if (!container) return;
+  container.innerHTML = "";
+  const colors = ["#f59e0b","#3b82f6","#10b981","#f43f5e","#8b5cf6","#ec4899","#f97316"];
+  for (let i = 0; i < 48; i++) {
+    const p = document.createElement("div");
+    p.className = "confetti-piece";
+    p.style.cssText = [
+      `left:${Math.random() * 100}%`,
+      `background:${colors[Math.floor(Math.random() * colors.length)]}`,
+      `width:${6 + Math.random() * 8}px`,
+      `height:${6 + Math.random() * 8}px`,
+      `border-radius:${Math.random() > 0.5 ? "50%" : "2px"}`,
+      `animation-delay:${Math.random() * 0.6}s`,
+      `animation-duration:${1.8 + Math.random() * 1.4}s`,
+      `--dx:${(Math.random() - 0.5) * 140}px`,
+    ].join(";");
+    container.appendChild(p);
+  }
+}
+
+function showNextRewardPopup() {
+  if (unlockQueueIdx >= pendingUnlocks.length) {
+    // All acted on — reload sidebar to reflect final statuses
+    loadRewards();
+    return;
+  }
+
+  const reward = pendingUnlocks[unlockQueueIdx];
+
+  // Find the next locked/higher tier to show as motivation
+  const allRewards = window._allRewards || [];
+  const next = allRewards.find(
+    (r) => r.points_required > reward.points_required && (r.status === "locked" || !r.status)
+  );
+  const nextHint = next
+    ? `🎯 Next up: ${next.icon || "🔒"} ${next.title || "Hidden reward"} at ${next.points_required} pts`
+    : "🏆 This is the highest reward tier!";
+
+  // Populate next-tier hint in both before/after sections
+  const hintBefore = document.getElementById("reward-next-hint-before");
+  const hintAfter  = document.getElementById("reward-next-hint-after");
+  if (hintBefore) hintBefore.textContent = nextHint;
+  if (hintAfter)  hintAfter.textContent  = nextHint;
+
+  // Update save button label with the next reward name
+  const saveBtn = document.getElementById("reward-save-btn");
+  if (saveBtn) {
+    saveBtn.textContent = next
+      ? `💾 Save — hold out for ${next.icon || "🔒"} ${next.title || "bigger reward"}`
+      : "💾 Save for later";
+  }
+
+  // Reset to "before reveal" state
+  document.getElementById("reward-before").style.display = "";
+  document.getElementById("reward-after").style.display  = "none";
+  document.getElementById("reward-bounce-icon").textContent = "🎁";
+  document.getElementById("reward-icon").textContent  = reward.icon;
+  document.getElementById("reward-title").textContent = reward.title;
+  document.getElementById("reward-desc").textContent  = reward.description || "";
+  document.getElementById("reward-pts").textContent   = `🎯 ${reward.points_required} pts milestone`;
+
+  const claimBtn = document.getElementById("reward-claim-btn");
+  claimBtn.disabled    = false;
+  claimBtn.textContent = "🎁 Claim Reward!";
+
+  document.getElementById("reward-popup-overlay").style.display = "flex";
+  document.body.style.overflow = "hidden";
+  spawnConfetti();
+}
+
+function revealReward() {
+  document.getElementById("reward-before").style.display = "none";
+  document.getElementById("reward-after").style.display  = "";
+  spawnConfetti();
+}
+
+async function doClaimReward() {
+  const reward = pendingUnlocks[unlockQueueIdx];
+  const btn    = document.getElementById("reward-claim-btn");
+  btn.disabled    = true;
+  btn.textContent = "Claiming…";
+
+  const res = await api.claimReward(reward.id).catch(() => null);
+  if (res?.success) {
+    btn.textContent = "✅ Claimed! Admin will be in touch 🎉";
+    setTimeout(() => {
+      closeRewardPopup();
+      unlockQueueIdx++;
+      setTimeout(showNextRewardPopup, 400);
+    }, 1500);
+  } else {
+    btn.disabled    = false;
+    btn.textContent = "🎁 Claim Reward!";
+    alert(res?.message || "Failed to claim. Please try again.");
+  }
+}
+
+async function doPassReward() {
+  const reward = pendingUnlocks[unlockQueueIdx];
+  await api.passReward(reward.id).catch(() => null);
+  closeRewardPopup();
+  unlockQueueIdx++;
+  setTimeout(showNextRewardPopup, 400);
+}
+
+function closeRewardPopup() {
+  document.getElementById("reward-popup-overlay").style.display = "none";
+  document.body.style.overflow = "";
+}
+
+async function doClaimPassedReward(rewardId, btn) {
+  const confirmed = window.confirm("Are you sure you want to claim this reward now? 🎁\nYour points will be deducted once the admin fulfills it.");
+  if (!confirmed) return;
+  btn.disabled    = true;
+  btn.textContent = "Claiming…";
+  const res = await api.claimReward(rewardId).catch(() => null);
+  if (res?.success) {
+    btn.textContent = "✅ Claimed! Admin will reach out 🎉";
+    setTimeout(() => loadRewards(), 1400);
+  } else {
+    btn.disabled    = false;
+    btn.textContent = "😬 Still want it? Claim now";
+    alert(res?.message || "Could not claim. Please try again.");
+  }
+}
+
+window.revealReward        = revealReward;
+window.doClaimReward       = doClaimReward;
+window.doPassReward        = doPassReward;
+window.closeRewardPopup    = closeRewardPopup;
+window.doClaimPassedReward = doClaimPassedReward;
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────
 (async () => {
   const me = await api.me().catch(() => null);
@@ -612,8 +820,9 @@ async function loadChallenges() {
     const badge = document.getElementById("topbar-role-badge");
     badge.textContent = "⭐ Admin";
     badge.style.display = "inline-flex";
-    document.getElementById("btn-post-challenge").style.display = "inline-flex";
-    document.getElementById("btn-manage-users").style.display  = "inline-flex";
+    document.getElementById("btn-post-challenge").style.display  = "inline-flex";
+    document.getElementById("btn-manage-users").style.display    = "inline-flex";
+    document.getElementById("btn-rewards").style.display         = "inline-flex";
     document.getElementById("admin-sidebar-links").style.display = "block";
   }
 
@@ -642,6 +851,9 @@ async function loadChallenges() {
   document.getElementById("content").style.display  = "flex";
 
   await loadChallenges();
+
+  // Load rewards (non-admin only)
+  if (role !== "admin") await loadRewards();
 })();
 
 // ══════════════════════════════════════════════════════════════════════════

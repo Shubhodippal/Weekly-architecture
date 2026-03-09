@@ -60,6 +60,32 @@ export async function handleGradeSubmission(request, env, submissionId) {
     "UPDATE submissions SET grade = ?, remark = ?, points = ?, evaluated_at = ? WHERE id = ?"
   ).bind(grade, remark.trim(), points, now, id).run();
 
+  // Auto-unlock rewards based on new total points (non-blocking)
+  try {
+    const totRow = await env.DB.prepare(
+      "SELECT COALESCE(SUM(points), 0) AS total FROM submissions WHERE user_id = ?"
+    ).bind(row.user_id).first();
+    const newTotal = totRow?.total ?? 0;
+
+    const newRewards = await env.DB.prepare(`
+      SELECT r.id FROM rewards r
+      WHERE  r.active = 1
+      AND    r.points_required <= ?
+      AND    NOT EXISTS (
+        SELECT 1 FROM user_rewards ur WHERE ur.user_id = ? AND ur.reward_id = r.id
+      )
+    `).bind(newTotal, row.user_id).all();
+
+    const unlockTime = new Date().toISOString();
+    for (const reward of newRewards.results) {
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO user_rewards (user_id, reward_id, status, unlocked_at) VALUES (?, ?, 'unlocked', ?)"
+      ).bind(row.user_id, reward.id, unlockTime).run();
+    }
+  } catch (e) {
+    console.error("[gradeSubmission] reward unlock failed:", e);
+  }
+
   // Email notification (non-blocking failure)
   try {
     await sendEvaluationEmail({

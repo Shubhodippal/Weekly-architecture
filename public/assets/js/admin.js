@@ -41,7 +41,7 @@ function renderTable(users) {
   const tbody = document.getElementById("table-body");
   if (!users.length) {
     tbody.innerHTML =
-      '<tr><td colspan="6"><div class="empty-state"><div class="empty-state__icon">👥</div>No users found.</div></td></tr>';
+      '<tr><td colspan="7"><div class="empty-state"><div class="empty-state__icon">👥</div>No users found.</div></td></tr>';
     return;
   }
 
@@ -61,6 +61,10 @@ function renderTable(users) {
         </td>
         <td style="color:#6b7280;">${escHtml(u.email)}</td>
         <td><span class="badge badge-${u.role}">${u.role === "admin" ? "⭐ Admin" : "👤 User"}</span></td>
+        <td>
+          <span style="font-weight:700;color:${(u.total_points||0)>0?'#059669':'#94a3b8'}">${u.total_points ?? 0} pts</span>
+          <button class="btn btn-sm" style="margin-left:6px;padding:2px 9px;font-size:11px;background:#f0fdf4;border:1px solid #86efac;color:#15803d;border-radius:6px;cursor:pointer;" onclick="openAdjModal(${u.id},'${escHtml(u.name)}',${u.total_points||0})">✏️ Adjust</button>
+        </td>
         <td>${fmt(u.last_login)}</td>
         <td>${fmt(u.created_at)}</td>
         <td>
@@ -129,6 +133,50 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
   await api.logout();
   window.location.href = "/index.html";
 });
+
+// ── Adjust Points modal ───────────────────────────────────────────────────
+let _adjUserId = null;
+
+function openAdjModal(id, name, currentPts) {
+  _adjUserId = id;
+  document.getElementById("adj-user-label").textContent = `${name} — current balance: ${currentPts} pts`;
+  document.getElementById("adj-points").value  = "";
+  document.getElementById("adj-reason").value  = "";
+  const btn = document.getElementById("adj-confirm-btn");
+  btn.disabled = false;
+  btn.textContent = "Apply";
+  document.getElementById("adj-modal-overlay").style.display = "flex";
+}
+
+function closeAdjModal() {
+  document.getElementById("adj-modal-overlay").style.display = "none";
+  _adjUserId = null;
+}
+
+async function confirmAdjustPoints() {
+  const pts    = parseInt(document.getElementById("adj-points").value, 10);
+  const reason = document.getElementById("adj-reason").value.trim();
+  if (!pts || isNaN(pts)) { alert("Enter a valid non-zero number."); return; }
+
+  const btn = document.getElementById("adj-confirm-btn");
+  btn.disabled = true;
+  btn.textContent = "Applying…";
+
+  const res = await api.adjustPoints(_adjUserId, pts, reason || undefined).catch(() => null);
+  if (res?.success) {
+    alert(`✅ ${res.message}\nNew balance: ${res.new_balance} pts`);
+    closeAdjModal();
+    loadUsers();
+  } else {
+    alert(res?.message || "Failed to adjust points.");
+    btn.disabled = false;
+    btn.textContent = "Apply";
+  }
+}
+
+window.openAdjModal        = openAdjModal;
+window.closeAdjModal       = closeAdjModal;
+window.confirmAdjustPoints = confirmAdjustPoints;
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────
 (async () => {
