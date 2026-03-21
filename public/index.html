@@ -3,105 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Challenge Accepted</title>
+  <title>Challenge Accepted – Weekly Challenge Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/style.css" />
 </head>
 <body>
   <div class="page-center">
-    <div class="card">
-
-      <!-- Branding -->
+    <div class="card landing-card">
       <div class="auth-logo">
         <div class="auth-logo__icon">🎯</div>
         <div class="auth-logo__title">Challenge Accepted</div>
-        <div class="auth-logo__sub">The challenge is live. Are you?</div>
+        <div class="auth-logo__sub">Weekly coding challenges, points, and rewards.</div>
       </div>
 
-      <!-- Step indicator -->
-      <div class="steps">
-        <div class="step-dot active" id="step-email"></div>
-        <div class="step-dot" id="step-otp"></div>
-      </div>
-
-      <!-- ── Step 1: Email ─────────────────────────────────────────── -->
-      <div id="email-section">
-        <div class="alert" id="email-alert"></div>
-
-        <form id="email-form" novalidate>
-          <!-- Name (hidden initially, shown for new users) -->
-          <div class="form-group" id="name-group" style="display:none;">
-            <label class="form-label" for="name">Full Name</label>
-            <input
-              id="name"
-              type="text"
-              class="form-input"
-              placeholder="Your full name"
-              autocomplete="name"
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="email">Email address</label>
-            <input
-              id="email"
-              type="email"
-              class="form-input"
-              placeholder="you@example.com"
-              required
-              autocomplete="email"
-            />
-          </div>
-
-          <button id="email-btn" type="submit" class="btn btn-primary btn-full">
-            <span id="email-spinner" class="spinner" style="display:none;"></span>
-            Continue with Email
-          </button>
-        </form>
-      </div>
-
-      <!-- ── Step 2: OTP ───────────────────────────────────────────── -->
-      <div id="otp-section" style="display:none;">
-        <button class="back-link" id="back-btn">← Back</button>
-
-        <p style="font-size:14px;color:#6b7280;margin-bottom:20px;">
-          We sent a 6-digit code to <strong id="otp-email-hint" style="color:#374151;"></strong>
+      <div class="landing-content">
+        <p class="landing-text">
+          Solve curated weekly problems, compete on the leaderboard,
+          and unlock real-world rewards — all in one place.
         </p>
 
-        <div class="alert" id="otp-alert"></div>
+        <ul class="landing-highlights">
+          <li>📅 New challenges every week</li>
+          <li>🏆 Points, streaks, and reward tiers</li>
+          <li>💬 Threaded discussions with moderation</li>
+          <li>🤖 AI-assisted challenge generation</li>
+        </ul>
 
-        <form id="otp-form" novalidate>
-          <div class="form-group">
-            <label class="form-label" for="otp">Verification code</label>
-            <input
-              id="otp"
-              type="text"
-              inputmode="numeric"
-              pattern="\d{6}"
-              maxlength="6"
-              class="form-input otp-input"
-              placeholder="000000"
-              autocomplete="one-time-code"
-              required
-            />
-          </div>
-
-          <button id="otp-btn" type="submit" class="btn btn-primary btn-full">
-            <span id="otp-spinner" class="spinner" style="display:none;"></span>
-            Verify &amp; Sign In
-          </button>
-        </form>
-
-        <div class="divider">or</div>
-
-        <button id="resend-btn" class="btn btn-outline btn-full">Resend OTP</button>
+        <div class="landing-actions">
+          <a href="/login.html" class="btn btn-primary btn-full">Get Started</a>
+          <button id="landing-dashboard-btn" class="btn btn-outline btn-full" style="margin-top:8px;">Go to Dashboard</button>
+        </div>
       </div>
-
     </div>
   </div>
 
   <script src="/assets/js/api.js"></script>
-  <script src="/assets/js/login.js"></script>
+  <script>
+    // If already logged in, allow quick jump to dashboard
+    (async () => {
+      const btn = document.getElementById("landing-dashboard-btn");
+      if (!btn) return;
+
+      let cachedMe = null;
+      btn.addEventListener("click", async () => {
+        try {
+          if (!cachedMe) {
+            cachedMe = await api.me();
+          }
+          if (cachedMe && cachedMe.success) {
+            window.location.href = "/dashboard.html";
+          } else {
+            window.location.href = "/login.html";
+          }
+        } catch {
+          window.location.href = "/login.html";
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
