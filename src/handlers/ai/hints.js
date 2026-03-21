@@ -2,24 +2,6 @@ import { requireAuth } from "../../middleware/auth.js";
 import { json } from "../../utils/response.js";
 import { generateHintForLevel } from "../../services/aiAssist.js";
 
-function isWeakStoredHint(text, challengeDesc = "") {
-  const t = String(text || "").trim();
-  if (!t || t.length < 40 || t.length > 800) return true;
-
-  const low = t.toLowerCase();
-  const weakPatterns = [
-    "use one small concrete example from",
-    "turn your traced example for",
-    "for in modern messaging applications",
-  ];
-  if (weakPatterns.some((p) => low.includes(p))) return true;
-
-  const desc = String(challengeDesc || "").trim().toLowerCase();
-  if (desc && low.includes(desc.slice(0, 220))) return true;
-
-  return false;
-}
-
 /**
  * POST /api/ai/hints
  * Body: { challengeId: number, revealLevel?: 1|2|3|4 }
@@ -83,46 +65,8 @@ export async function handleHints(request, env) {
 
     let unlockedLevel = Number(row.unlocked_level) || 0;
 
-    if (!hasRevealLevel && unlockedLevel > 0) {
-      const persisted = [
-        String(row.hint_1 || "").trim(),
-        String(row.hint_2 || "").trim(),
-        String(row.hint_3 || "").trim(),
-        String(row.hint_4 || "").trim(),
-      ];
-
-      for (let level = 1; level <= unlockedLevel; level += 1) {
-        if (!isWeakStoredHint(persisted[level - 1], challenge.description || "")) continue;
-
-        try {
-          const regenerated = await generateHintForLevel(env, {
-            challenge,
-            level,
-            previousHints: persisted.slice(0, level - 1).filter(Boolean),
-          });
-          const repairedText = String(regenerated?.text || "").trim();
-          if (!repairedText) continue;
-
-          persisted[level - 1] = repairedText;
-          const hintColumn = `hint_${level}`;
-          await env.DB.prepare(
-            `UPDATE user_challenge_hints
-             SET ${hintColumn} = ?, updated_at = datetime('now')
-             WHERE user_id = ? AND challenge_id = ?`
-          ).bind(repairedText, userId, challengeId).run();
-        } catch (repairErr) {
-          console.warn(`[ai/hints] weak hint repair failed for level ${level}`, repairErr);
-        }
-      }
-
-      row = {
-        ...row,
-        hint_1: persisted[0] || "",
-        hint_2: persisted[1] || "",
-        hint_3: persisted[2] || "",
-        hint_4: persisted[3] || "",
-      };
-    }
+    if (!hasRevealLevel && unlockedLevel < 0) unlockedLevel = 0;
+    if (!hasRevealLevel && unlockedLevel > 4) unlockedLevel = 4;
 
     if (hasRevealLevel) {
       if (revealLevel !== unlockedLevel + 1) {
