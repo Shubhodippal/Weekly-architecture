@@ -5,6 +5,49 @@ let allChallenges   = [];
 let currentUser     = null;
 let pendingUnlocks  = [];   // reward unlocks not yet acted on
 let unlockQueueIdx  = 0;    // which pending unlock we're showing
+const commentsByChallenge = new Map();
+const commentSortByChallenge = new Map();
+
+function renderLeaderboard(leaderboard = [], meRow = null) {
+  const el = document.getElementById("leaderboard-list");
+  if (!el) return;
+
+  if (!leaderboard.length) {
+    el.innerHTML = '<div class="comments-empty">No leaderboard data yet.</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="leaderboard-rows">
+      ${leaderboard.map((row) => `
+        <div class="leaderboard-row ${row.is_me ? "leaderboard-row--me" : ""}">
+          <div class="leaderboard-rank">#${row.rank}</div>
+          <div class="leaderboard-meta">
+            <div class="leaderboard-name">${esc(initials(row.name))}</div>
+            <div class="leaderboard-sub">🔥 ${row.current_streak}d streak</div>
+          </div>
+          <div class="leaderboard-points">${row.total_points}</div>
+        </div>
+      `).join("")}
+      ${meRow && !leaderboard.some((row) => row.is_me) ? `
+        <div class="leaderboard-divider"></div>
+        <div class="leaderboard-row leaderboard-row--me">
+          <div class="leaderboard-rank">#${meRow.rank}</div>
+          <div class="leaderboard-meta">
+            <div class="leaderboard-name">${esc(initials(meRow.name))}</div>
+            <div class="leaderboard-sub">🔥 ${meRow.current_streak}d streak</div>
+          </div>
+          <div class="leaderboard-points">${meRow.total_points}</div>
+        </div>
+      ` : ""}
+    </div>`;
+}
+
+async function loadLeaderboard() {
+  const res = await api.leaderboard().catch(() => null);
+  if (!res?.success) return;
+  renderLeaderboard(res.leaderboard || [], res.me || null);
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function fmtDate(d) {
@@ -13,6 +56,25 @@ function fmtDate(d) {
   return new Date(s).toLocaleDateString(undefined, {
     day: "numeric", month: "short", year: "numeric",
   });
+}
+
+function fmtDateTime(d) {
+  if (!d) return "—";
+  const normalized = String(d).includes("T") ? String(d) : String(d).replace(" ", "T") + "Z";
+  const dt = new Date(normalized);
+  if (Number.isNaN(dt.getTime())) return "—";
+  return dt.toLocaleString(undefined, {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function toDateTimeInputValue(d) {
+  if (!d) return "";
+  const normalized = String(d).includes("T") ? String(d) : String(d).replace(" ", "T") + "Z";
+  const dt = new Date(normalized);
+  if (Number.isNaN(dt.getTime())) return "";
+  const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
 }
 
 function daysLeft(dateStr) {
@@ -28,6 +90,32 @@ function esc(s) {
   return String(s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function initials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+}
+
+function formatCommentContent(content) {
+  const safe = esc(content || "");
+  return safe.replace(/(^|\s)@([a-zA-Z0-9_]{2,32})/g, '$1<span class="comment-mention">@$2</span>');
+}
+
+function timeAgo(input) {
+  if (!input) return "just now";
+  const d = new Date(input + (String(input).includes("T") ? "" : "Z"));
+  const sec = Math.max(1, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}d ago`;
+  return fmtDate(input);
 }
 
 function showFeedAlert(msg) {
@@ -53,6 +141,8 @@ function renderFeed(list) {
     const expired = c.is_expired;
     const dl      = daysLeft(c.last_date);
     const isAdmin = currentUser.role === "admin";
+    const scheduled = isAdmin && c.is_published === false;
+    const commentSort = commentSortByChallenge.get(c.id) || "top";
 
     return `
     <article class="feed-card ${expired ? "feed-card--expired" : ""}">
@@ -70,6 +160,7 @@ function renderFeed(list) {
             : `<span class="pill pill--green">Active</span>
                ${dl ? `<span class="pill pill--blue">${esc(dl)}</span>` : ""}`
           }
+          ${scheduled ? `<span class="pill pill--blue">Scheduled</span>` : ""}
         </div>
       </div>
 
@@ -78,6 +169,7 @@ function renderFeed(list) {
 
       <div class="feed-card__deadline">
         📅 Deadline: <strong>${fmtDate(c.last_date)}</strong>
+        ${scheduled ? `<div style="margin-top:6px;">🕒 Publishes: <strong>${esc(fmtDateTime(c.publish_at))}</strong></div>` : ""}
       </div>
 
       <div class="feed-card__actions">
@@ -141,6 +233,39 @@ function renderFeed(list) {
           loading="lazy"
         ></iframe>
       </div>
+
+      <section class="comments-section" data-challenge-id="${c.id}">
+        <div class="comments-section__head">
+          <div class="comments-section__title-wrap">
+            <span>💬 Comments</span>
+            <span class="comments-count" id="comment-count-${c.id}">...</span>
+          </div>
+          <div class="comments-section__tools">
+            <label class="comment-sort-label" for="comment-sort-${c.id}">Sort:</label>
+            <select class="comment-sort-select" id="comment-sort-${c.id}" data-challenge-id="${c.id}">
+              <option value="top" ${commentSort === "top" ? "selected" : ""}>Top</option>
+              <option value="newest" ${commentSort === "newest" ? "selected" : ""}>Newest</option>
+            </select>
+          </div>
+        </div>
+
+        <form class="comment-form" data-challenge-id="${c.id}">
+          <textarea
+            class="comment-input"
+            id="comment-input-${c.id}"
+            maxlength="2000"
+            placeholder="Add a public comment..."
+            required
+          ></textarea>
+          <div class="comment-form__actions">
+            <button type="submit" class="btn btn-primary btn-sm">Comment</button>
+          </div>
+        </form>
+
+        <div class="comments-list" id="comments-list-${c.id}">
+          <div class="comments-loading">Loading comments…</div>
+        </div>
+      </section>
     </article>`;
   }).join("");
 
@@ -214,6 +339,353 @@ function renderFeed(list) {
   el.querySelectorAll(".view-submissions-btn").forEach((btn) => {
     btn.addEventListener("click", () => openViewSubmissionsModal(btn.dataset.id));
   });
+
+  setupCommentSections(list);
+}
+
+function countComments(nodes = []) {
+  return nodes.reduce((acc, node) => acc + 1 + countComments(node.replies || []), 0);
+}
+
+function renderCommentItem(challengeId, comment, isReply = false) {
+  const badge = comment.author_role === "admin"
+    ? '<span class="comment-role-badge">Admin</span>'
+    : "";
+  const pinned = comment.is_pinned && !isReply
+    ? '<span class="comment-pinned-badge">Pinned</span>'
+    : "";
+  const edited = comment.updated_at && comment.updated_at !== comment.created_at
+    ? '<span class="comment-edited">(edited)</span>'
+    : "";
+  const replies = comment.replies || [];
+  const showMoreNeeded = replies.length > 2;
+  const hiddenForViewer = comment.is_hidden && currentUser?.role !== "admin";
+  const contentHtml = hiddenForViewer
+    ? '<em style="color:#6b7280;">This comment is hidden by admin.</em>'
+    : formatCommentContent(comment.content);
+  const reportLabel = comment.is_reported_by_me ? "Reported" : "Report";
+
+  return `
+    <div class="comment-item ${isReply ? "comment-item--reply" : ""}" data-comment-id="${comment.id}">
+      <div class="comment-avatar">${esc(comment.author_name?.charAt(0)?.toUpperCase() || "U")}</div>
+      <div class="comment-main">
+        <div class="comment-meta">
+          <span class="comment-author">${esc(comment.author_name || "User")}</span>
+          ${badge}
+          ${pinned}
+          <span class="comment-time">${esc(timeAgo(comment.created_at))}</span>
+          ${edited}
+        </div>
+        <div class="comment-content" id="comment-content-${comment.id}">${contentHtml}</div>
+
+        <form class="comment-edit-form" id="edit-form-${comment.id}" data-comment-id="${comment.id}" style="display:none;">
+          <textarea class="comment-input comment-input--reply" id="edit-input-${comment.id}" maxlength="2000" required>${esc(comment.content)}</textarea>
+          <div class="comment-form__actions">
+            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            <button type="button" class="btn btn-ghost btn-sm comment-edit-cancel" data-comment-id="${comment.id}">Cancel</button>
+          </div>
+        </form>
+
+        <div class="comment-actions">
+          <button type="button" class="comment-link-btn comment-react-btn ${comment.my_reaction === "like" ? "comment-link-btn--active" : ""}" data-comment-id="${comment.id}" data-reaction="like" data-current="${esc(comment.my_reaction || "")}">👍 ${comment.likes_count || 0}</button>
+          <button type="button" class="comment-link-btn comment-react-btn ${comment.my_reaction === "dislike" ? "comment-link-btn--active" : ""}" data-comment-id="${comment.id}" data-reaction="dislike" data-current="${esc(comment.my_reaction || "")}">👎 ${comment.dislikes_count || 0}</button>
+          ${!hiddenForViewer ? `<button type="button" class="comment-link-btn comment-reply-toggle" data-comment-id="${comment.id}">Reply</button>` : ""}
+          ${comment.can_pin ? `<button type="button" class="comment-link-btn comment-pin-toggle" data-comment-id="${comment.id}" data-is-pinned="${comment.is_pinned ? "1" : "0"}">${comment.is_pinned ? "Unpin" : "Pin"}</button>` : ""}
+          ${comment.can_hide ? `<button type="button" class="comment-link-btn comment-hide-toggle" data-comment-id="${comment.id}" data-is-hidden="${comment.is_hidden ? "1" : "0"}">${comment.is_hidden ? "Unhide" : "Hide"}</button>` : ""}
+          ${!comment.can_hide && !comment.is_mine ? `<button type="button" class="comment-link-btn comment-report-btn" data-comment-id="${comment.id}" data-reported="${comment.is_reported_by_me ? "1" : "0"}">${reportLabel}</button>` : ""}
+          ${comment.can_edit && !hiddenForViewer ? `<button type="button" class="comment-link-btn comment-edit-toggle" data-comment-id="${comment.id}">Edit</button>` : ""}
+          ${comment.can_delete ? `<button type="button" class="comment-link-btn comment-delete-btn" data-comment-id="${comment.id}">Delete</button>` : ""}
+        </div>
+
+        <form class="comment-reply-form" id="reply-form-${comment.id}" data-challenge-id="${challengeId}" data-parent-id="${comment.id}" style="display:none;">
+          <textarea class="comment-input comment-input--reply" id="reply-input-${comment.id}" maxlength="2000" placeholder="Write a reply..." required></textarea>
+          <div class="comment-form__actions">
+            <button type="submit" class="btn btn-primary btn-sm">Reply</button>
+            <button type="button" class="btn btn-ghost btn-sm comment-reply-cancel" data-comment-id="${comment.id}">Cancel</button>
+          </div>
+        </form>
+
+        ${!hiddenForViewer && replies.length
+          ? `<div class="comment-replies" id="comment-replies-${comment.id}">
+              ${replies.map((r, idx) => `<div class="comment-reply-wrap ${idx > 1 ? "comment-reply-hidden" : ""}">${renderCommentItem(challengeId, r, true)}</div>`).join("")}
+              ${showMoreNeeded ? `<button type="button" class="comment-link-btn comment-show-more-btn" data-comment-id="${comment.id}" data-state="collapsed">View ${replies.length - 2} more replies</button>` : ""}
+            </div>`
+          : ""}
+      </div>
+    </div>`;
+}
+
+function renderComments(challengeId, comments = [], errorMessage = "") {
+  const listEl = document.getElementById(`comments-list-${challengeId}`);
+  const countEl = document.getElementById(`comment-count-${challengeId}`);
+  if (!listEl || !countEl) return;
+
+  if (errorMessage) {
+    listEl.innerHTML = `<div class="comments-error">${esc(errorMessage)}</div>`;
+    countEl.textContent = "0";
+    return;
+  }
+
+  const total = countComments(comments);
+  countEl.textContent = `${total} ${total === 1 ? "comment" : "comments"}`;
+
+  if (!comments.length) {
+    listEl.innerHTML = `<div class="comments-empty">No comments yet. Start the discussion.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = comments.map((c) => renderCommentItem(challengeId, c)).join("");
+  bindCommentActions(challengeId);
+}
+
+async function loadComments(challengeId, sortOverride) {
+  const sort = sortOverride || commentSortByChallenge.get(challengeId) || "top";
+  commentSortByChallenge.set(challengeId, sort);
+  const res = await api.listChallengeComments(challengeId, sort).catch(() => null);
+  if (!res?.success) {
+    renderComments(challengeId, [], res?.message || "Failed to load comments.");
+    return;
+  }
+  commentsByChallenge.set(challengeId, res.comments || []);
+  renderComments(challengeId, res.comments || []);
+}
+
+function bindCommentActions(challengeId) {
+  const listEl = document.getElementById(`comments-list-${challengeId}`);
+  if (!listEl) return;
+
+  listEl.querySelectorAll(".comment-reply-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const form = document.getElementById(`reply-form-${btn.dataset.commentId}`);
+      if (!form) return;
+      const next = form.style.display === "none" ? "block" : "none";
+      form.style.display = next;
+      if (next === "block") {
+        const input = document.getElementById(`reply-input-${btn.dataset.commentId}`);
+        if (input) input.focus();
+      }
+    });
+  });
+
+  listEl.querySelectorAll(".comment-reply-cancel").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const form = document.getElementById(`reply-form-${btn.dataset.commentId}`);
+      if (form) form.style.display = "none";
+    });
+  });
+
+  listEl.querySelectorAll(".comment-edit-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const commentId = btn.dataset.commentId;
+      const form = document.getElementById(`edit-form-${commentId}`);
+      const content = document.getElementById(`comment-content-${commentId}`);
+      if (!form || !content) return;
+      const next = form.style.display === "none" ? "block" : "none";
+      form.style.display = next;
+      content.style.display = next === "block" ? "none" : "block";
+      if (next === "block") {
+        const input = document.getElementById(`edit-input-${commentId}`);
+        if (input) input.focus();
+      }
+    });
+  });
+
+  listEl.querySelectorAll(".comment-edit-cancel").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const commentId = btn.dataset.commentId;
+      const form = document.getElementById(`edit-form-${commentId}`);
+      const content = document.getElementById(`comment-content-${commentId}`);
+      if (form) form.style.display = "none";
+      if (content) content.style.display = "block";
+    });
+  });
+
+  listEl.querySelectorAll(".comment-show-more-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const commentId = btn.dataset.commentId;
+      const container = document.getElementById(`comment-replies-${commentId}`);
+      if (!container) return;
+
+      const hidden = container.querySelectorAll(".comment-reply-hidden");
+      const isCollapsed = btn.dataset.state !== "expanded";
+
+      hidden.forEach((item) => {
+        item.style.display = isCollapsed ? "block" : "none";
+      });
+
+      btn.dataset.state = isCollapsed ? "expanded" : "collapsed";
+      btn.textContent = isCollapsed
+        ? "Hide replies"
+        : `View ${hidden.length} more replies`;
+    });
+  });
+
+  listEl.querySelectorAll(".comment-react-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const current = btn.dataset.current || "";
+      const target = btn.dataset.reaction;
+      const next = current === target ? null : target;
+      btn.disabled = true;
+      const res = await api.reactComment(btn.dataset.commentId, next).catch(() => null);
+      if (!res?.success) {
+        alert(res?.message || "Failed to react to comment.");
+        btn.disabled = false;
+        return;
+      }
+      await loadComments(challengeId);
+    });
+  });
+
+  listEl.querySelectorAll(".comment-pin-toggle").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const isPinned = btn.dataset.isPinned === "1";
+      btn.disabled = true;
+      const res = await api.pinComment(btn.dataset.commentId, !isPinned).catch(() => null);
+      if (!res?.success) {
+        alert(res?.message || "Failed to update pin status.");
+        btn.disabled = false;
+        return;
+      }
+      await loadComments(challengeId);
+    });
+  });
+
+  listEl.querySelectorAll(".comment-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Delete this comment and its replies?")) return;
+      btn.disabled = true;
+      const res = await api.deleteComment(btn.dataset.commentId).catch(() => null);
+      if (!res?.success) {
+        alert(res?.message || "Failed to delete comment.");
+        btn.disabled = false;
+        return;
+      }
+      await loadComments(challengeId);
+    });
+  });
+
+  listEl.querySelectorAll(".comment-report-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (btn.dataset.reported === "1") {
+        alert("You already reported this comment.");
+        return;
+      }
+      const reason = prompt("Optional reason for reporting this comment:", "") || "";
+      btn.disabled = true;
+      const res = await api.reportComment(btn.dataset.commentId, reason).catch(() => null);
+      if (!res?.success) {
+        alert(res?.message || "Failed to report comment.");
+        btn.disabled = false;
+        return;
+      }
+      await loadComments(challengeId);
+    });
+  });
+
+  listEl.querySelectorAll(".comment-hide-toggle").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const isHidden = btn.dataset.isHidden === "1";
+      let reason = "";
+      if (!isHidden) reason = prompt("Optional hide reason:", "") || "";
+      btn.disabled = true;
+      const res = await api.hideComment(btn.dataset.commentId, !isHidden, reason).catch(() => null);
+      if (!res?.success) {
+        alert(res?.message || "Failed to update hidden status.");
+        btn.disabled = false;
+        return;
+      }
+      await loadComments(challengeId);
+    });
+  });
+
+  listEl.querySelectorAll(".comment-reply-form").forEach((form) => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const parentId = form.dataset.parentId;
+      const input = document.getElementById(`reply-input-${parentId}`);
+      const content = input?.value?.trim() || "";
+      if (!content) return;
+
+      const submitBtn = form.querySelector("button[type='submit']");
+      if (submitBtn) submitBtn.disabled = true;
+
+      const res = await api.postChallengeComment(challengeId, {
+        parent_id: Number(parentId),
+        content,
+      }).catch(() => null);
+
+      if (!res?.success) {
+        alert(res?.message || "Failed to post reply.");
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+
+      await loadComments(challengeId);
+    });
+  });
+
+  listEl.querySelectorAll(".comment-edit-form").forEach((form) => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const commentId = form.dataset.commentId;
+      const input = document.getElementById(`edit-input-${commentId}`);
+      const content = input?.value?.trim() || "";
+      if (!content) return;
+
+      const submitBtn = form.querySelector("button[type='submit']");
+      if (submitBtn) submitBtn.disabled = true;
+
+      const res = await api.editComment(commentId, { content }).catch(() => null);
+
+      if (!res?.success) {
+        alert(res?.message || "Failed to update comment.");
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+
+      await loadComments(challengeId);
+    });
+  });
+}
+
+function setupCommentSections(challenges) {
+  document.querySelectorAll(".comment-sort-select").forEach((select) => {
+    select.addEventListener("change", async () => {
+      const challengeId = Number(select.dataset.challengeId);
+      const sort = select.value === "newest" ? "newest" : "top";
+      commentSortByChallenge.set(challengeId, sort);
+      await loadComments(challengeId, sort);
+    });
+  });
+
+  document.querySelectorAll(".comment-form").forEach((form) => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const challengeId = Number(form.dataset.challengeId);
+      const input = document.getElementById(`comment-input-${challengeId}`);
+      const content = input?.value?.trim() || "";
+      if (!content) return;
+
+      const submitBtn = form.querySelector("button[type='submit']");
+      if (submitBtn) submitBtn.disabled = true;
+
+      const res = await api.postChallengeComment(challengeId, { content }).catch(() => null);
+      if (!res?.success) {
+        alert(res?.message || "Failed to post comment.");
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+
+      input.value = "";
+      if (submitBtn) submitBtn.disabled = false;
+      await loadComments(challengeId);
+    });
+  });
+
+  challenges.forEach((c) => {
+    if (!commentSortByChallenge.has(c.id)) commentSortByChallenge.set(c.id, "top");
+    loadComments(c.id);
+  });
 }
 
 function refreshStats() {
@@ -228,6 +700,7 @@ let activeFilter = "all";
 function applyFilter() {
   if (activeFilter === "active")  renderFeed(allChallenges.filter((c) => !c.is_expired));
   else if (activeFilter === "expired") renderFeed(allChallenges.filter((c) => c.is_expired));
+  else if (activeFilter === "scheduled") renderFeed(allChallenges.filter((c) => c.is_published === false));
   else renderFeed(allChallenges);
 }
 
@@ -249,6 +722,211 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
 // ── Topbar / header post button ───────────────────────────────────────────
 const headerPostBtn = document.getElementById("btn-post-challenge");
 if (headerPostBtn) headerPostBtn.addEventListener("click", openPostModal);
+
+const headerAiPostBtn = document.getElementById("btn-ai-post-now");
+const headerReportsBtn = document.getElementById("btn-reported-comments");
+function showAiPostAlert(message, type = "error") {
+  const el = document.getElementById("ai-post-modal-alert");
+  if (!el) return;
+  el.textContent = message;
+  el.className = `alert alert-${type} show`;
+}
+
+function clearAiPostAlert() {
+  const el = document.getElementById("ai-post-modal-alert");
+  if (!el) return;
+  el.textContent = "";
+  el.className = "alert";
+}
+
+function openAiPostModal() {
+  clearAiPostAlert();
+  document.getElementById("ai-post-modal-overlay").style.display = "flex";
+  document.body.style.overflow = "hidden";
+  document.getElementById("ai-topic").focus();
+}
+
+function closeAiPostModal(force) {
+  if (force === true || (force && force.target === document.getElementById("ai-post-modal-overlay"))) {
+    document.getElementById("ai-post-modal-overlay").style.display = "none";
+    document.body.style.overflow = "";
+  }
+}
+
+window.closeAiPostModal = closeAiPostModal;
+
+if (headerAiPostBtn) {
+  headerAiPostBtn.addEventListener("click", openAiPostModal);
+}
+
+function closeReportedCommentsModal(force) {
+  if (force === true || (force && force.target === document.getElementById("reported-comments-overlay"))) {
+    document.getElementById("reported-comments-overlay").style.display = "none";
+    document.body.style.overflow = "";
+  }
+}
+
+window.closeReportedCommentsModal = closeReportedCommentsModal;
+
+async function loadReportedComments() {
+  const listEl = document.getElementById("reported-comments-list");
+  if (!listEl) return;
+
+  listEl.innerHTML = '<p style="color:#9ca3af;text-align:center;">Loading reports…</p>';
+  const res = await api.adminListCommentReports().catch(() => null);
+  if (!res?.success) {
+    listEl.innerHTML = `<p style="color:#ef4444;text-align:center;">${esc(res?.message || "Failed to load reports")}</p>`;
+    return;
+  }
+
+  const rows = res.reports || [];
+  if (!rows.length) {
+    listEl.innerHTML = '<p style="color:#6b7280;text-align:center;">No reported comments.</p>';
+    return;
+  }
+
+  listEl.innerHTML = rows.map((r) => `
+    <div class="vs-item" data-comment-id="${r.comment_id}">
+      <div class="vs-item__header">
+        <div class="vs-item__avatar">🚩</div>
+        <div class="vs-item__meta">
+          <strong>${esc(r.comment_author || "User")}</strong>
+          <span class="vs-item__email">Challenge: ${esc(r.challenge_title || "—")}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;">
+          <span class="pill pill--red">${Number(r.report_count || 0)} reports</span>
+          ${Number(r.is_hidden) === 1 ? '<span class="pill pill--blue">Hidden</span>' : ''}
+        </div>
+      </div>
+      <div class="vs-item__text">${esc(r.content || "")}</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:8px;white-space:pre-wrap;">
+        <strong>Reasons:</strong> ${esc((r.reasons || "(no reason)").replace(/\s\|\|\s/g, " | "))}
+      </div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px;">
+        Reported by: ${esc(r.reported_by || "—")}
+      </div>
+      ${r.hidden_reason ? `<div style="font-size:12px;color:#6b7280;margin-top:4px;"><strong>Hidden reason:</strong> ${esc(r.hidden_reason)}</div>` : ""}
+      <div class="grade-panel__actions" style="margin-top:10px;">
+        <button class="btn btn-outline btn-sm report-hide-btn" data-comment-id="${r.comment_id}" data-hidden="${Number(r.is_hidden) === 1 ? "1" : "0"}">${Number(r.is_hidden) === 1 ? "Unhide" : "Hide"}</button>
+        <button class="btn btn-danger btn-sm report-delete-btn" data-comment-id="${r.comment_id}">Delete</button>
+        <button class="btn btn-ghost btn-sm report-clear-btn" data-comment-id="${r.comment_id}">Clear Reports</button>
+      </div>
+    </div>
+  `).join('<hr class="vs-divider" />');
+
+  listEl.querySelectorAll(".report-hide-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const isHidden = btn.dataset.hidden === "1";
+      const reason = !isHidden ? (prompt("Optional hide reason:", "") || "") : "";
+      btn.disabled = true;
+      const result = await api.hideComment(btn.dataset.commentId, !isHidden, reason).catch(() => null);
+      if (!result?.success) {
+        alert(result?.message || "Failed to update hide status.");
+        btn.disabled = false;
+        return;
+      }
+      await loadReportedComments();
+      await loadChallenges();
+    });
+  });
+
+  listEl.querySelectorAll(".report-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Delete this comment?")) return;
+      btn.disabled = true;
+      const result = await api.deleteComment(btn.dataset.commentId).catch(() => null);
+      if (!result?.success) {
+        alert(result?.message || "Failed to delete comment.");
+        btn.disabled = false;
+        return;
+      }
+      await loadReportedComments();
+      await loadChallenges();
+    });
+  });
+
+  listEl.querySelectorAll(".report-clear-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      const result = await api.adminClearCommentReports(btn.dataset.commentId).catch(() => null);
+      if (!result?.success) {
+        alert(result?.message || "Failed to clear reports.");
+        btn.disabled = false;
+        return;
+      }
+      await loadReportedComments();
+    });
+  });
+}
+
+async function openReportedCommentsModal() {
+  document.getElementById("reported-comments-overlay").style.display = "flex";
+  document.body.style.overflow = "hidden";
+  await loadReportedComments();
+}
+
+if (headerReportsBtn) {
+  headerReportsBtn.addEventListener("click", openReportedCommentsModal);
+}
+
+document.getElementById("ai-post-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  clearAiPostAlert();
+
+  const model = document.getElementById("ai-model").value;
+  const topic = document.getElementById("ai-topic").value.trim();
+  const difficulty = document.getElementById("ai-difficulty").value;
+  const keyPointsRaw = document.getElementById("ai-key-points").value;
+  const extraNotes = document.getElementById("ai-extra-notes").value.trim();
+
+  if (!topic) {
+    showAiPostAlert("Topic is required.");
+    return;
+  }
+
+  const submitBtn = document.getElementById("ai-post-submit-btn");
+  const submitSpinner = document.getElementById("ai-post-submit-spinner");
+  submitBtn.disabled = true;
+  submitSpinner.style.display = "inline-block";
+
+  const res = await api.triggerAutoChallenge({
+    model,
+    topic,
+    difficulty,
+    keyPoints: keyPointsRaw
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    extraNotes,
+  }).catch(() => null);
+
+  submitBtn.disabled = false;
+  submitSpinner.style.display = "none";
+
+  if (!res?.success) {
+    showAiPostAlert(res?.message || "Failed to trigger AI challenge.");
+    return;
+  }
+
+  if (res.result?.status === "created") {
+    closeAiPostModal(true);
+    alert(`✅ New AI challenge posted: ${res.result.title}`);
+    await loadChallenges();
+    return;
+  }
+
+  if (res.result?.status === "skipped_recent") {
+    showAiPostAlert("Skipped because a recent AI challenge already exists.", "info");
+    return;
+  }
+
+  if (res.result?.status === "disabled") {
+    showAiPostAlert("Auto-post is disabled in environment settings.", "info");
+    return;
+  }
+
+  showAiPostAlert("AI challenge trigger executed.", "success");
+});
 
 // ══════════════════════════════════════════════════════════════════════════
 // Post Challenge Modal
@@ -284,6 +962,7 @@ function openEditModal(challenge) {
   document.getElementById("e-title").value        = challenge.title || "";
   document.getElementById("e-desc").value         = challenge.description || "";
   document.getElementById("e-date").value         = challenge.last_date || "";
+  document.getElementById("e-publish-at").value   = toDateTimeInputValue(challenge.publish_at);
   document.getElementById("e-answer-desc").value  = challenge.answer_description || "";
   document.getElementById("e-remove-answer").value = "0";
 
@@ -427,6 +1106,7 @@ document.getElementById("edit-challenge-form").addEventListener("submit", async 
   const title      = document.getElementById("e-title").value.trim();
   const desc       = document.getElementById("e-desc").value.trim();
   const date       = document.getElementById("e-date").value;
+  const publishAt  = document.getElementById("e-publish-at").value;
   const answerDesc = document.getElementById("e-answer-desc").value.trim();
   const removeAns  = document.getElementById("e-remove-answer").value;
   const eAnswerPdf = document.getElementById("e-answer-pdf");
@@ -442,6 +1122,7 @@ document.getElementById("edit-challenge-form").addEventListener("submit", async 
   fd.append("title", title);
   fd.append("description", desc);
   fd.append("last_date", date);
+  if (publishAt) fd.append("publish_at", publishAt);
   fd.append("answer_description", answerDesc);
   if (removeAns === "1") fd.append("remove_answer_pdf", "1");
   if (answerFile) fd.append("answer_pdf", answerFile, answerFile.name);
@@ -538,6 +1219,7 @@ document.getElementById("challenge-form").addEventListener("submit", async (e) =
   const title      = document.getElementById("c-title").value.trim();
   const desc       = document.getElementById("c-desc").value.trim();
   const date       = document.getElementById("c-date").value;
+  const publishAt  = document.getElementById("c-publish-at").value;
   const file       = pdfInput._file || pdfInput.files[0];
   const answerDesc = document.getElementById("c-answer-desc").value.trim();
   const answerFile = answerPdfInput._file || answerPdfInput.files[0];
@@ -550,6 +1232,7 @@ document.getElementById("challenge-form").addEventListener("submit", async (e) =
   fd.append("title", title);
   fd.append("description", desc);
   fd.append("last_date", date);
+  if (publishAt) fd.append("publish_at", publishAt);
   fd.append("pdf", file, file.name);
   if (answerDesc) fd.append("answer_description", answerDesc);
   if (answerFile) fd.append("answer_pdf", answerFile, answerFile.name);
@@ -586,6 +1269,7 @@ document.getElementById("challenge-form").addEventListener("submit", async (e) =
   answerPdfInput._file = null;
   answerDropLabel.textContent = "Click or drag & drop answer PDF here";
   answerDropZone.classList.remove("drop-zone--selected");
+  document.getElementById("c-publish-at").value = "";
 
   // Reload challenges and close modal after brief pause
   await loadChallenges();
@@ -820,7 +1504,10 @@ window.doClaimPassedReward = doClaimPassedReward;
     const badge = document.getElementById("topbar-role-badge");
     badge.textContent = "⭐ Admin";
     badge.style.display = "inline-flex";
+    document.getElementById("btn-ai-post-now").style.display    = "inline-flex";
+    document.getElementById("btn-reported-comments").style.display = "inline-flex";
     document.getElementById("btn-post-challenge").style.display  = "inline-flex";
+    document.getElementById("filter-scheduled").style.display    = "inline-block";
     document.getElementById("btn-manage-users").style.display    = "inline-flex";
     document.getElementById("btn-rewards").style.display         = "inline-flex";
     document.getElementById("admin-sidebar-links").style.display = "block";
@@ -835,6 +1522,7 @@ window.doClaimPassedReward = doClaimPassedReward;
   roleBadge.className   = `badge badge-${role}`;
   document.getElementById("user-last-login").textContent = fmtDate(last_login);
   document.getElementById("user-joined").textContent     = fmtDate(created_at);
+  document.getElementById("user-streak").textContent     = `Streak: ${me.user.current_streak || 0}d (best ${me.user.best_streak || 0}d)`;
 
   // Points widget (non-admin users)
   if (role !== "admin" && me.user.total_points !== undefined) {
@@ -845,12 +1533,15 @@ window.doClaimPassedReward = doClaimPassedReward;
 
   // Set min date for new challenges
   document.getElementById("c-date").min = new Date().toISOString().slice(0, 10);
+  const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  document.getElementById("c-publish-at").value = nowLocal;
 
   // Show layout
   document.getElementById("skeleton").style.display = "none";
   document.getElementById("content").style.display  = "flex";
 
   await loadChallenges();
+  await loadLeaderboard();
 
   // Load rewards (non-admin only)
   if (role !== "admin") await loadRewards();
@@ -1064,6 +1755,26 @@ async function openViewSubmissionsModal(challengeId) {
         ${s.solution_text
           ? `<div class="vs-item__text">${esc(s.solution_text)}</div>`
           : `<em style="color:#9ca3af;font-size:13px;">No text solution provided.</em>`}
+        ${s.plagiarism_percent !== null && s.plagiarism_percent !== undefined
+          ? `<div class="vs-plagiarism ${s.plagiarism_percent >= 70 ? "vs-plagiarism--high" : s.plagiarism_percent >= 40 ? "vs-plagiarism--mid" : "vs-plagiarism--low"}">
+               <div><strong>Similarity score: ${s.plagiarism_percent}%</strong>${s.plagiarism_with ? ` (closest: ${esc(s.plagiarism_with)})` : ""}</div>
+               ${s.plagiarism_details
+                 ? `<div class="vs-plagiarism__meta">
+                      <span>Risk: <strong>${esc((s.plagiarism_details.risk_level || "low").toUpperCase())}</strong></span>
+                      <span>Words: <strong>${s.plagiarism_details.compared_word_count || 0}</strong></span>
+                    </div>
+                    <div class="vs-plagiarism__breakdown">
+                      <span>Unique words: ${s.plagiarism_details.unique_word_jaccard ?? 0}%</span>
+                      <span>3-gram phrases: ${s.plagiarism_details.phrase_overlap_3gram ?? 0}%</span>
+                      <span>Char pattern: ${s.plagiarism_details.char_pattern_similarity ?? 0}%</span>
+                      <span>Longest run: ${s.plagiarism_details.longest_common_run_words ?? 0} words</span>
+                    </div>
+                    ${(s.plagiarism_details.overlap_phrases || []).length
+                      ? `<div class="vs-plagiarism__phrases">Shared phrases: ${(s.plagiarism_details.overlap_phrases || []).map((p) => `“${esc(p)}”`).join(", ")}</div>`
+                      : ""}`
+                 : ""}
+             </div>`
+          : ""}
         ${s.has_file
           ? `<a href="/api/submissions/${s.id}/file" target="_blank" class="btn btn-outline btn-sm" style="margin-top:8px;">📎 ${esc(s.file_name || "View file")}</a>`
           : ""}

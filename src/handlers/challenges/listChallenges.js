@@ -10,7 +10,7 @@ export async function handleListChallenges(request, env) {
   if (error) return error;
 
   const { results } = await env.DB.prepare(
-    `SELECT c.id, c.title, c.description, c.last_date, c.pdf_name, c.created_at,
+    `SELECT c.id, c.title, c.description, c.last_date, c.pdf_name, c.created_at, c.publish_at,
             c.answer_description, c.answer_key, c.answer_name,
             u.name AS posted_by_name,
             s.grade AS my_grade, s.remark AS my_remark,
@@ -23,13 +23,24 @@ export async function handleListChallenges(request, env) {
 
   const isAdmin = session.role === "admin";
   const now = new Date().toISOString().slice(0, 10);
-  const challenges = results.map((c) => {
+  const nowDate = new Date();
+  const challenges = results
+    .filter((c) => {
+      if (isAdmin) return true;
+      const publishAt = c.publish_at ? new Date(String(c.publish_at).replace(" ", "T") + "Z") : null;
+      return !publishAt || publishAt.getTime() <= nowDate.getTime();
+    })
+    .map((c) => {
     const isExpired = c.last_date < now;
+    const publishAtDate = c.publish_at ? new Date(String(c.publish_at).replace(" ", "T") + "Z") : null;
+    const isPublished = !publishAtDate || publishAtDate.getTime() <= nowDate.getTime();
     return {
       id:                 c.id,
       title:              c.title,
       description:        c.description,
       last_date:          c.last_date,
+      publish_at:         c.publish_at,
+      is_published:       isPublished,
       pdf_name:           c.pdf_name,
       created_at:         c.created_at,
       posted_by_name:     c.posted_by_name,

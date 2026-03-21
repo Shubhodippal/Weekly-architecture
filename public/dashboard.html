@@ -19,6 +19,12 @@
         <span class="badge badge-admin" id="topbar-role-badge" style="display:none;margin-left:6px;"></span>
       </span>
       <!-- Admin actions (hidden for users) -->
+      <button id="btn-ai-post-now" class="btn btn-outline btn-sm" style="display:none;">
+        🤖 AI Post Now
+      </button>
+      <button id="btn-reported-comments" class="btn btn-outline btn-sm" style="display:none;">
+        🚩 Reports
+      </button>
       <button id="btn-post-challenge" class="btn btn-primary btn-sm" style="display:none;">
         + Post Challenge
       </button>
@@ -72,6 +78,7 @@
         <div class="ps-meta">
           <div>🕐 <span id="user-last-login">—</span></div>
           <div>📅 <span id="user-joined">—</span></div>
+          <div>🔥 <span id="user-streak">Streak: —</span></div>
         </div>
       </div>
 
@@ -100,6 +107,7 @@
           <button class="filter-pill active" data-filter="all">All</button>
           <button class="filter-pill" data-filter="active">Active</button>
           <button class="filter-pill" data-filter="expired">Expired</button>
+          <button class="filter-pill" id="filter-scheduled" data-filter="scheduled" style="display:none;">Scheduled</button>
         </div>
       </div>
 
@@ -120,8 +128,73 @@
         <div class="stat-row"><span>Active</span><strong id="stat-active" style="color:#059669;">—</strong></div>
         <div class="stat-row"><span>Expired</span><strong id="stat-expired" style="color:#dc2626;">—</strong></div>
       </div>
+
+      <div class="sidebar-card" id="leaderboard-card">
+        <div class="sidebar-card__title">🏅 Leaderboard</div>
+        <div id="leaderboard-list" class="leaderboard-list">
+          <div class="comments-loading">Loading leaderboard…</div>
+        </div>
+      </div>
     </aside>
 
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       AI Post Now Modal (admin only)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="ai-post-modal-overlay" class="modal-overlay" style="display:none;" onclick="closeAiPostModal(event)">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ai-post-modal-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="ai-post-modal-title">🤖 AI Challenge Settings</h2>
+        <button class="modal-close" onclick="closeAiPostModal(true)" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert" id="ai-post-modal-alert"></div>
+
+        <form id="ai-post-form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="ai-model">Model <span class="req">*</span></label>
+            <select id="ai-model" class="form-input" required>
+              <option value="claude-opus-4-6">Claude Opus 4.6</option>
+              <option value="gpt-5.4-2026-03-05">gpt-5.4-2026-03-05</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-topic">Topic / Subject Area <span class="req">*</span></label>
+            <input id="ai-topic" type="text" class="form-input" placeholder="e.g. Graph algorithms, REST API design" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-difficulty">Difficulty <span class="req">*</span></label>
+            <select id="ai-difficulty" class="form-input" required>
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-key-points">Key points (comma-separated)</label>
+            <input id="ai-key-points" type="text" class="form-input" placeholder="e.g. edge cases, complexity analysis, topological sort" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-extra-notes">Extra notes (optional)</label>
+            <textarea id="ai-extra-notes" class="form-input" rows="3" placeholder="Any specific constraints or expectations?" style="resize:vertical;"></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="closeAiPostModal(true)">Cancel</button>
+            <button id="ai-post-submit-btn" type="submit" class="btn btn-primary">
+              <span id="ai-post-submit-spinner" class="spinner" style="display:none;"></span>
+              Generate & Post
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════════════
@@ -154,6 +227,11 @@
           <div class="form-group">
             <label class="form-label" for="c-date">Submission Deadline <span class="req">*</span></label>
             <input id="c-date" type="date" class="form-input" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="c-publish-at">Publish At <span style="color:#9ca3af;font-weight:400;">(optional, schedule post)</span></label>
+            <input id="c-publish-at" type="datetime-local" class="form-input" />
           </div>
 
           <div class="form-group">
@@ -227,6 +305,11 @@
           <div class="form-group">
             <label class="form-label" for="e-date">Submission Deadline <span class="req">*</span></label>
             <input id="e-date" type="date" class="form-input" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="e-publish-at">Publish At <span style="color:#9ca3af;font-weight:400;">(optional, schedule post)</span></label>
+            <input id="e-publish-at" type="datetime-local" class="form-input" />
           </div>
 
           <!-- ── Answer section ── -->
@@ -319,6 +402,23 @@
       <div class="modal-body">
         <div id="vs-list" class="vs-list">
           <p style="color:#9ca3af;text-align:center;">Loading…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Reported Comments Modal (admin only)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="reported-comments-overlay" class="modal-overlay" style="display:none;padding:0;" onclick="closeReportedCommentsModal(event)">
+    <div class="modal-box modal-box--fullscreen" role="dialog" aria-modal="true" aria-labelledby="reported-comments-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="reported-comments-title">🚩 Reported Comments</h2>
+        <button class="modal-close" onclick="closeReportedCommentsModal(true)" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="reported-comments-list" class="vs-list">
+          <p style="color:#9ca3af;text-align:center;">Loading reports…</p>
         </div>
       </div>
     </div>

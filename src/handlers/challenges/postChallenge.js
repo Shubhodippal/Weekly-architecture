@@ -27,6 +27,7 @@ export async function handlePostChallenge(request, env) {
   const title              = (formData.get("title") || "").trim();
   const description        = (formData.get("description") || "").trim();
   const lastDate           = (formData.get("last_date") || "").trim();
+  const publishAtRaw       = (formData.get("publish_at") || "").trim();
   const answerDescription  = (formData.get("answer_description") || "").trim();
   const pdfFile            = formData.get("pdf");
   const answerPdfFile      = formData.get("answer_pdf");
@@ -37,6 +38,11 @@ export async function handlePostChallenge(request, env) {
   }
   if (!lastDate || !/^\d{4}-\d{2}-\d{2}$/.test(lastDate)) {
     return json({ success: false, message: "last_date must be in YYYY-MM-DD format" }, 400);
+  }
+
+  const publishAt = normalizePublishAt(publishAtRaw);
+  if (publishAtRaw && !publishAt) {
+    return json({ success: false, message: "publish_at must be a valid datetime" }, 400);
   }
   if (!pdfFile || typeof pdfFile === "string") {
     return json({ success: false, message: "A PDF file is required" }, 400);
@@ -85,15 +91,15 @@ export async function handlePostChallenge(request, env) {
   // Persist metadata to D1
   const result = await env.DB.prepare(
     `INSERT INTO challenges (title, description, last_date, pdf_key, pdf_name, posted_by,
-                             answer_description, answer_key, answer_name)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                             answer_description, answer_key, answer_name, publish_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(title, description || null, lastDate, pdfKey, pdfName, session.userId,
-          answerDescription || null, answerKey, answerName)
+          answerDescription || null, answerKey, answerName, publishAt)
     .run();
 
   const challenge = await env.DB.prepare(
-    `SELECT c.id, c.title, c.description, c.last_date, c.pdf_name, c.created_at,
+    `SELECT c.id, c.title, c.description, c.last_date, c.pdf_name, c.created_at, c.publish_at,
             u.name AS posted_by_name
      FROM challenges c
      JOIN users u ON u.id = c.posted_by
@@ -123,4 +129,11 @@ export async function handlePostChallenge(request, env) {
   }
 
   return json({ success: true, message: "Challenge posted successfully", challenge }, 201);
+}
+
+function normalizePublishAt(raw) {
+  if (!raw) return new Date().toISOString().slice(0, 19).replace("T", " ");
+  const value = new Date(raw);
+  if (Number.isNaN(value.getTime())) return null;
+  return value.toISOString().slice(0, 19).replace("T", " ");
 }

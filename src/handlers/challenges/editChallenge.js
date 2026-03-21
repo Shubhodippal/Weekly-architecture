@@ -26,6 +26,7 @@ export async function handleEditChallenge(request, env, id) {
   const title             = (formData.get("title")              || "").trim();
   const description       = (formData.get("description")        ?? "").trim();
   const lastDate          = (formData.get("last_date")          || "").trim();
+  const publishAtRaw      = (formData.get("publish_at")         || "").trim();
   const answerDescription = (formData.get("answer_description") ?? "").trim();
   const removeAnswerPdf   = formData.get("remove_answer_pdf") === "1";
   const answerPdfFile     = formData.get("answer_pdf");
@@ -35,6 +36,11 @@ export async function handleEditChallenge(request, env, id) {
   }
   if (!lastDate || !/^\d{4}-\d{2}-\d{2}$/.test(lastDate)) {
     return json({ success: false, message: "last_date must be YYYY-MM-DD" }, 400);
+  }
+
+  const publishAt = normalizePublishAt(publishAtRaw);
+  if (publishAtRaw && !publishAt) {
+    return json({ success: false, message: "publish_at must be a valid datetime" }, 400);
   }
 
   const MAX_BYTES = 20 * 1024 * 1024;
@@ -89,14 +95,14 @@ export async function handleEditChallenge(request, env, id) {
 
   await env.DB.prepare(
     `UPDATE challenges
-     SET title = ?, description = ?, last_date = ?,
+       SET title = ?, description = ?, last_date = ?, publish_at = ?,
          answer_description = ?, answer_key = ?, answer_name = ?
      WHERE id = ?`
-  ).bind(title, description || null, lastDate,
-         answerDescription || null, newAnswerKey, newAnswerName, id).run();
+    ).bind(title, description || null, lastDate, publishAt,
+      answerDescription || null, newAnswerKey, newAnswerName, id).run();
 
   const updated = await env.DB.prepare(
-    `SELECT c.id, c.title, c.description, c.last_date, c.pdf_name, c.created_at,
+    `SELECT c.id, c.title, c.description, c.last_date, c.pdf_name, c.created_at, c.publish_at,
             c.answer_description, c.answer_name,
             u.name AS posted_by_name
      FROM challenges c
@@ -105,4 +111,11 @@ export async function handleEditChallenge(request, env, id) {
   ).bind(id).first();
 
   return json({ success: true, message: "Challenge updated", challenge: updated });
+}
+
+function normalizePublishAt(raw) {
+  if (!raw) return new Date().toISOString().slice(0, 19).replace("T", " ");
+  const value = new Date(raw);
+  if (Number.isNaN(value.getTime())) return null;
+  return value.toISOString().slice(0, 19).replace("T", " ");
 }

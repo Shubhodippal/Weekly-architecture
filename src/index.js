@@ -1,5 +1,6 @@
 import { router } from "./router.js";
 import { CORS } from "./config.js";
+import { runAutoPostChallenge } from "./jobs/autoPostChallenge.js";
 
 export default {
   async fetch(request, env) {
@@ -21,5 +22,14 @@ export default {
     }
 
     return new Response("Not found", { status: 404 });
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      runAutoPostChallenge(env, {
+        cron: event.cron,
+        scheduledTime: event.scheduledTime,
+      })
+    );
   },
 };

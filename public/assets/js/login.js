@@ -81,8 +81,8 @@ $("otp-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  // Redirect based on role
-  window.location.href = res.user.role === "admin" ? "/admin.html" : "/dashboard.html";
+  // Redirect based on role (admins land on dashboard by default)
+  window.location.href = "/dashboard.html";
 });
 
 // ── Resend OTP ────────────────────────────────────────────────────────────
@@ -116,6 +116,6 @@ $("otp").addEventListener("input", (e) => {
 (async () => {
   const res = await api.me().catch(() => null);
   if (res && res.success) {
-    window.location.href = res.user.role === "admin" ? "/admin.html" : "/dashboard.html";
+    window.location.href = "/dashboard.html";
   }
 })();

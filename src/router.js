@@ -2,9 +2,11 @@ import { handleRequestOtp } from "./handlers/auth/requestOtp.js";
 import { handleVerifyOtp } from "./handlers/auth/verifyOtp.js";
 import { handleLogout } from "./handlers/auth/logout.js";
 import { handleMe } from "./handlers/user/me.js";
+import { handleLeaderboard } from "./handlers/user/leaderboard.js";
 import { handleListUsers } from "./handlers/admin/listUsers.js";
 import { handleDeleteUser } from "./handlers/admin/deleteUser.js";
 import { handleAdjustPoints } from "./handlers/admin/adjustPoints.js";
+import { handleTriggerAutoChallenge } from "./handlers/admin/triggerAutoChallenge.js";
 import { handlePostChallenge } from "./handlers/challenges/postChallenge.js";
 import { handleListChallenges } from "./handlers/challenges/listChallenges.js";
 import { handleDownloadChallenge } from "./handlers/challenges/downloadChallenge.js";
@@ -27,6 +29,16 @@ import { handleAdminUpdateRewardTier } from "./handlers/rewards/adminUpdateRewar
 import { handleAdminListClaims } from "./handlers/rewards/adminListClaims.js";
 import { handleAdminFulfillClaim } from "./handlers/rewards/adminFulfillClaim.js";
 import { handleAdminRejectClaim } from "./handlers/rewards/adminRejectClaim.js";
+import { handleListComments } from "./handlers/comments/listComments.js";
+import { handlePostComment } from "./handlers/comments/postComment.js";
+import { handleDeleteComment } from "./handlers/comments/deleteComment.js";
+import { handleUpdateComment } from "./handlers/comments/updateComment.js";
+import { handleReactComment } from "./handlers/comments/reactComment.js";
+import { handlePinComment } from "./handlers/comments/pinComment.js";
+import { handleReportComment } from "./handlers/comments/reportComment.js";
+import { handleHideComment } from "./handlers/comments/hideComment.js";
+import { handleAdminListCommentReports } from "./handlers/comments/adminListReports.js";
+import { handleAdminClearCommentReports } from "./handlers/comments/adminClearReports.js";
 import { json } from "./utils/response.js";
 
 export async function router(request, env) {
@@ -48,6 +60,9 @@ export async function router(request, env) {
     if (method === "GET" && pathname === "/api/user/me")
       return handleMe(request, env);
 
+    if (method === "GET" && pathname === "/api/leaderboard")
+      return handleLeaderboard(request, env);
+
     // Admin routes
     if (method === "GET" && pathname === "/api/admin/users")
       return handleListUsers(request, env);
@@ -60,12 +75,50 @@ export async function router(request, env) {
     if (method === "PATCH" && adjustPointsMatch)
       return handleAdjustPoints(request, env, adjustPointsMatch[1]);
 
+    if (method === "POST" && pathname === "/api/admin/challenges/auto-post")
+      return handleTriggerAutoChallenge(request, env);
+
+    if (method === "GET" && pathname === "/api/admin/comments/reports")
+      return handleAdminListCommentReports(request, env);
+
     // Challenge routes
     if (method === "POST" && pathname === "/api/challenges")
       return handlePostChallenge(request, env);
 
     if (method === "GET" && pathname === "/api/challenges")
       return handleListChallenges(request, env);
+
+    const commentsForChallengeMatch = pathname.match(/^\/api\/challenges\/(\d+)\/comments$/);
+    if (method === "GET" && commentsForChallengeMatch)
+      return handleListComments(request, env, commentsForChallengeMatch[1]);
+    if (method === "POST" && commentsForChallengeMatch)
+      return handlePostComment(request, env, commentsForChallengeMatch[1]);
+
+    const commentIdMatch = pathname.match(/^\/api\/comments\/(\d+)$/);
+    if (method === "DELETE" && commentIdMatch)
+      return handleDeleteComment(request, env, commentIdMatch[1]);
+    if (method === "PATCH" && commentIdMatch)
+      return handleUpdateComment(request, env, commentIdMatch[1]);
+
+    const commentReactionMatch = pathname.match(/^\/api\/comments\/(\d+)\/reaction$/);
+    if (method === "POST" && commentReactionMatch)
+      return handleReactComment(request, env, commentReactionMatch[1]);
+
+    const commentPinMatch = pathname.match(/^\/api\/comments\/(\d+)\/pin$/);
+    if (method === "PATCH" && commentPinMatch)
+      return handlePinComment(request, env, commentPinMatch[1]);
+
+    const commentReportMatch = pathname.match(/^\/api\/comments\/(\d+)\/report$/);
+    if (method === "POST" && commentReportMatch)
+      return handleReportComment(request, env, commentReportMatch[1]);
+
+    const commentHideMatch = pathname.match(/^\/api\/comments\/(\d+)\/hide$/);
+    if (method === "PATCH" && commentHideMatch)
+      return handleHideComment(request, env, commentHideMatch[1]);
+
+    const adminClearReportsMatch = pathname.match(/^\/api\/admin\/comments\/(\d+)\/reports$/);
+    if (method === "DELETE" && adminClearReportsMatch)
+      return handleAdminClearCommentReports(request, env, adminClearReportsMatch[1]);
 
     const downloadMatch = pathname.match(/^\/api\/challenges\/(\d+)\/download$/);
     if (method === "GET" && downloadMatch)

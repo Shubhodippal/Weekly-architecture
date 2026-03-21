@@ -38,6 +38,11 @@ const api = {
     return apiFetch("/api/user/me");
   },
 
+  /** GET /api/leaderboard */
+  leaderboard() {
+    return apiFetch("/api/leaderboard");
+  },
+
   /** GET /api/admin/users */
   listUsers() {
     return apiFetch("/api/admin/users");
@@ -53,6 +58,14 @@ const api = {
     return apiFetch(`/api/admin/users/${id}/points`, {
       method: "PATCH",
       body: JSON.stringify({ points, reason }),
+    });
+  },
+
+  /** POST /api/admin/challenges/auto-post */
+  triggerAutoChallenge(payload = {}) {
+    return apiFetch("/api/admin/challenges/auto-post", {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
   },
 
@@ -123,6 +136,75 @@ const api = {
       method: "PATCH",
       body: JSON.stringify({ grade, remark }),
     });
+  },
+
+  /** GET /api/challenges/:id/comments */
+  listChallengeComments(challengeId, sort = "top") {
+    const q = sort === "newest" ? "newest" : "top";
+    return apiFetch(`/api/challenges/${challengeId}/comments?sort=${q}`);
+  },
+
+  /** POST /api/challenges/:id/comments */
+  postChallengeComment(challengeId, payload) {
+    return apiFetch(`/api/challenges/${challengeId}/comments`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** DELETE /api/comments/:id */
+  deleteComment(commentId) {
+    return apiFetch(`/api/comments/${commentId}`, { method: "DELETE" });
+  },
+
+  /** PATCH /api/comments/:id */
+  editComment(commentId, payload) {
+    return apiFetch(`/api/comments/${commentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** POST /api/comments/:id/reaction */
+  reactComment(commentId, reaction) {
+    return apiFetch(`/api/comments/${commentId}/reaction`, {
+      method: "POST",
+      body: JSON.stringify({ reaction }),
+    });
+  },
+
+  /** PATCH /api/comments/:id/pin */
+  pinComment(commentId, is_pinned) {
+    return apiFetch(`/api/comments/${commentId}/pin`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_pinned }),
+    });
+  },
+
+  /** POST /api/comments/:id/report */
+  reportComment(commentId, reason = "") {
+    return apiFetch(`/api/comments/${commentId}/report`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  /** PATCH /api/comments/:id/hide */
+  hideComment(commentId, is_hidden, reason = "") {
+    return apiFetch(`/api/comments/${commentId}/hide`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_hidden, reason }),
+    });
+  },
+
+  /** GET /api/admin/comments/reports */
+  adminListCommentReports() {
+    return apiFetch("/api/admin/comments/reports");
+  },
+
+  /** DELETE /api/admin/comments/:id/reports */
+  adminClearCommentReports(commentId) {
+    return apiFetch(`/api/admin/comments/${commentId}/reports`, { method: "DELETE" });
   },
 
   // ── Rewards (user) ───────────────────────────────────────────────────────

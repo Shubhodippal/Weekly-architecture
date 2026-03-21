@@ -16,6 +16,22 @@ function escHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+function showAutoPostAlert(message, type = "info") {
+  const el = document.getElementById("auto-post-alert");
+  if (!el) return;
+  el.textContent = message;
+  el.className = `alert alert-${type} show`;
+  el.style.display = "";
+}
+
+function hideAutoPostAlert() {
+  const el = document.getElementById("auto-post-alert");
+  if (!el) return;
+  el.className = "alert";
+  el.textContent = "";
+  el.style.display = "none";
+}
+
 let allUsers = [];
 
 async function loadUsers() {
@@ -132,6 +148,36 @@ document.getElementById("search").addEventListener("input", (e) => {
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await api.logout();
   window.location.href = "/index.html";
+});
+
+// Manual AI challenge trigger
+document.getElementById("auto-post-btn")?.addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  hideAutoPostAlert();
+
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Posting…';
+
+  const res = await api.triggerAutoChallenge().catch(() => null);
+
+  btn.disabled = false;
+  btn.textContent = original;
+
+  if (!res?.success) {
+    showAutoPostAlert(res?.message || "Failed to trigger AI challenge.", "error");
+    return;
+  }
+
+  if (res.result?.status === "created") {
+    showAutoPostAlert(`✅ New AI challenge posted: ${res.result.title}`, "success");
+  } else if (res.result?.status === "skipped_recent") {
+    showAutoPostAlert("ℹ️ Skipped because a recent AI challenge already exists.", "info");
+  } else if (res.result?.status === "disabled") {
+    showAutoPostAlert("ℹ️ Auto-post is disabled in environment settings.", "info");
+  } else {
+    showAutoPostAlert("✅ AI challenge trigger executed.", "success");
+  }
 });
 
 // ── Adjust Points modal ───────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { requireAuth } from "../../middleware/auth.js";
 import { json } from "../../utils/response.js";
+import { computeStreakStats } from "../../utils/streaks.js";
 
 export async function handleMe(request, env) {
   const { session, error } = await requireAuth(request, env);
@@ -18,6 +19,18 @@ export async function handleMe(request, env) {
     .first();
 
   if (!user) return json({ success: false, message: "User not found" }, 404);
+
+  const dateRows = await env.DB.prepare(
+    `SELECT submitted_at
+     FROM submissions
+     WHERE user_id = ? AND submitted_at IS NOT NULL`
+  ).bind(session.userId).all();
+
+  const streak = computeStreakStats((dateRows.results || []).map((row) => row.submitted_at));
+
+  user.current_streak = streak.currentStreak;
+  user.best_streak = streak.bestStreak;
+  user.last_active_date = streak.lastActiveDate;
 
   return json({ success: true, user });
 }
