@@ -3,64 +3,93 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Challenge Accepted – Weekly Challenge Platform</title>
+  <title>Challenge Accepted – Challenge &amp; Assessment Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/style.css" />
 </head>
-<body>
-  <div class="page-center">
-    <div class="card landing-card">
-      <div class="auth-logo">
-        <div class="auth-logo__icon">🎯</div>
-        <div class="auth-logo__title">Challenge Accepted</div>
-        <div class="auth-logo__sub">Weekly coding challenges, points, and rewards.</div>
-      </div>
-
-      <div class="landing-content">
-        <p class="landing-text">
-          Solve curated weekly problems, compete on the leaderboard,
-          and unlock real-world rewards — all in one place.
-        </p>
-
-        <ul class="landing-highlights">
-          <li>📅 New challenges every week</li>
-          <li>🏆 Points, streaks, and reward tiers</li>
-          <li>💬 Threaded discussions with moderation</li>
-          <li>🤖 AI-assisted challenge generation</li>
-        </ul>
-
-        <div class="landing-actions">
-          <a href="/login.html" class="btn btn-primary btn-full">Get Started</a>
-          <button id="landing-dashboard-btn" class="btn btn-outline btn-full" style="margin-top:8px;">Go to Dashboard</button>
-        </div>
+<body class="landing-body">
+  <header class="landing-header">
+    <div class="landing-header__left">
+      <span class="landing-logo-icon">🎯</span>
+      <div class="landing-logo-text">
+        <span class="landing-logo-title">Challenge Accepted <span class="landing-logo-by">by Examspcae</span></span>
+        <span class="landing-logo-sub">Challenges, grading, points, and rewards</span>
       </div>
     </div>
-  </div>
+    <div class="landing-header__right">
+      <a href="/login.html" class="btn btn-ghost btn-sm">Sign in</a>
+      <button id="landing-dashboard-btn" class="btn btn-primary btn-sm">Dashboard</button>
+    </div>
+  </header>
+
+  <main class="landing-main">
+    <section class="landing-hero landing-hero--minimal">
+      <div class="landing-hero__copy">
+        <div class="landing-pill">For institutes &amp; teams</div>
+        <h1 class="landing-hero__title">A clean platform for challenges and assessments.</h1>
+        <p class="landing-hero__subtitle">
+          Admins publish challenges when needed. Participants submit responses, get graded, and earn points and rewards
+          — with authentication, file storage, and moderation handled securely.
+        </p>
+
+        <div class="landing-cta-row">
+          <a href="/login.html" class="btn btn-primary landing-cta-main">Get started</a>
+          <button id="landing-cta-dashboard" class="btn btn-outline landing-cta-secondary">Dashboard</button>
+        </div>
+
+        <div class="landing-mini-grid" aria-label="Key capabilities">
+          <div class="landing-mini-item">
+            <div class="landing-mini-title">OTP sign-in</div>
+            <div class="landing-mini-sub">Passwordless, session-based auth.</div>
+          </div>
+          <div class="landing-mini-item">
+            <div class="landing-mini-title">Submissions &amp; grading</div>
+            <div class="landing-mini-sub">Text + file uploads with feedback.</div>
+          </div>
+          <div class="landing-mini-item">
+            <div class="landing-mini-title">Points &amp; rewards</div>
+            <div class="landing-mini-sub">Leaderboards, tiers, and claims.</div>
+          </div>
+          <div class="landing-mini-item">
+            <div class="landing-mini-title">Moderation tools</div>
+            <div class="landing-mini-sub">Reports, hide/unhide, pinning.</div>
+          </div>
+        </div>
+
+        <div class="landing-footnote">Powered by Cloudflare Workers, D1, KV &amp; R2.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="landing-footer">
+    <span>Challenge Accepted &middot; Deployed on Cloudflare Workers</span>
+  </footer>
 
   <script src="/assets/js/api.js"></script>
   <script>
-    // If already logged in, allow quick jump to dashboard
-    (async () => {
-      const btn = document.getElementById("landing-dashboard-btn");
-      if (!btn) return;
-
-      let cachedMe = null;
-      btn.addEventListener("click", async () => {
-        try {
-          if (!cachedMe) {
-            cachedMe = await api.me();
-          }
-          if (cachedMe && cachedMe.success) {
-            window.location.href = "/dashboard.html";
-          } else {
-            window.location.href = "/login.html";
-          }
-        } catch {
-          window.location.href = "/login.html";
+    // Shared helper to try dashboard first if already authenticated
+    async function goToDashboardOrLogin() {
+      try {
+        const res = await api.me();
+        if (res && res.success) {
+          window.location.href = '/dashboard.html';
+        } else {
+          window.location.href = '/login.html';
         }
-      });
-    })();
+      } catch (e) {
+        window.location.href = '/login.html';
+      }
+    }
+
+    const dashBtn = document.getElementById('landing-dashboard-btn');
+    if (dashBtn) {
+      dashBtn.addEventListener('click', goToDashboardOrLogin);
+    }
+    const dashCta = document.getElementById('landing-cta-dashboard');
+    if (dashCta) {
+      dashCta.addEventListener('click', goToDashboardOrLogin);
+    }
   </script>
 </body>
 </html>

@@ -411,6 +411,169 @@ body {
   .topbar { padding: 0 16px; }
 }
 
+/* ── Marketing landing page ─────────────────────────────────────────────── */
+.landing-body {
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #e0e7ff 0, rgba(224,231,255,0) 45%),
+              radial-gradient(circle at bottom right, #fee2e2 0, rgba(254,226,226,0) 40%),
+              var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: rgba(248,250,252,0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(148,163,184,0.3);
+}
+.landing-header__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.landing-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: 20px;
+}
+.landing-logo-text { display: flex; flex-direction: column; }
+.landing-logo-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.landing-logo-by {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sm);
+}
+.landing-logo-sub {
+  font-size: 12px;
+  color: var(--text-sm);
+}
+
+.landing-header__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.landing-main {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 24px 40px;
+  flex: 1;
+}
+
+.landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+  margin: 18px 0 20px;
+}
+.landing-hero--minimal {
+  background: rgba(255,255,255,0.86);
+  border: 1px solid rgba(226,232,240,0.95);
+  border-radius: 18px;
+  padding: 26px 22px;
+  box-shadow: var(--shadow-md);
+}
+.landing-hero__copy {
+  max-width: 600px;
+}
+.landing-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(79,70,229,0.08);
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 14px;
+}
+.landing-hero__title {
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+.landing-hero__subtitle {
+  font-size: 15px;
+  color: var(--text-md);
+  margin-bottom: 20px;
+}
+.landing-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.landing-cta-main { padding-inline: 20px; }
+.landing-cta-secondary { padding-inline: 16px; }
+
+.landing-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+.landing-mini-item {
+  padding: 12px 12px 10px;
+  border-radius: 12px;
+  background: rgba(248,250,252,0.9);
+  border: 1px solid rgba(226,232,240,0.95);
+}
+.landing-mini-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.landing-mini-sub {
+  font-size: 13px;
+  color: var(--text-sm);
+}
+
+.landing-footnote {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-sm);
+}
+
+.landing-footer {
+  padding: 14px 24px 20px;
+  font-size: 12px;
+  color: var(--text-sm);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .landing-header {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .landing-main { padding-inline: 16px; }
+  .landing-hero__title { font-size: 26px; }
+}
+
 /* ── Challenge cards ─────────────────────────────────────────────────────── */
 .challenges-grid {
   display: grid;
