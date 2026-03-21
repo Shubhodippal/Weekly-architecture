@@ -1,7 +1,7 @@
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MODEL = "claude-opus-4-6";
-const HINT_MODEL = "gpt-5.1-2025-11-13";
+const HINT_MODEL = "gpt-5.1";
 
 function normalizeJsonText(text) {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
