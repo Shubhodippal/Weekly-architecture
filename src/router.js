@@ -39,6 +39,8 @@ import { handleReportComment } from "./handlers/comments/reportComment.js";
 import { handleHideComment } from "./handlers/comments/hideComment.js";
 import { handleAdminListCommentReports } from "./handlers/comments/adminListReports.js";
 import { handleAdminClearCommentReports } from "./handlers/comments/adminClearReports.js";
+import { handleHints } from "./handlers/ai/hints.js";
+import { handleRecommendations } from "./handlers/ai/recommendations.js";
 import { json } from "./utils/response.js";
 
 export async function router(request, env) {
@@ -193,6 +195,13 @@ export async function router(request, env) {
     const rejectMatch = pathname.match(/^\/api\/admin\/rewards\/claims\/(\d+)\/reject$/);
     if (method === "PATCH" && rejectMatch)
       return handleAdminRejectClaim(request, env, rejectMatch[1]);
+
+    // AI assistance routes
+    if (method === "POST" && pathname === "/api/ai/hints")
+      return handleHints(request, env);
+
+    if (method === "GET" && pathname === "/api/ai/recommendations")
+      return handleRecommendations(request, env);
 
     return json({ success: false, message: "Not found" }, 404);
   } catch (err) {

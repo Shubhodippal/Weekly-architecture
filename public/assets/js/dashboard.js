@@ -182,9 +182,11 @@ function renderFeed(list) {
           ⬇ Download
         </a>
         ${!isAdmin
-          ? (expired
-              ? `<button class="btn btn-ghost btn-sm" disabled>🔒 Closed</button>`
-              : `<button class="btn btn-primary btn-sm submit-btn" data-id="${c.id}">✍️ Enter Solution</button>`)
+          ? `
+             ${expired
+               ? `<button class="btn btn-ghost btn-sm" disabled>🔒 Closed</button>`
+               : `<button class="btn btn-primary btn-sm submit-btn" data-id="${c.id}">✍️ Enter Solution</button>`}
+             <button class="btn btn-outline btn-sm ai-hints-btn" data-id="${c.id}">🤖 AI Hints</button>`
           : `<button class="btn btn-outline btn-sm view-submissions-btn" data-id="${c.id}">👁 View Submissions</button>
              <div class="accept-toggle ${expired ? 'accept-toggle--off' : 'accept-toggle--on'} accept-toggle-btn" data-id="${c.id}" title="${expired ? 'Click to reopen challenge' : 'Click to stop accepting responses'}" style="cursor:pointer;">
                <div class="accept-toggle__track"></div>
@@ -334,6 +336,10 @@ function renderFeed(list) {
 
   el.querySelectorAll(".submit-btn").forEach((btn) => {
     btn.addEventListener("click", () => openSubmitModal(btn.dataset.id));
+  });
+
+  el.querySelectorAll(".ai-hints-btn").forEach((btn) => {
+    btn.addEventListener("click", () => openAiHintsModal(btn.dataset.id));
   });
 
   el.querySelectorAll(".view-submissions-btn").forEach((btn) => {
@@ -1554,6 +1560,9 @@ let submitChallengeId = null;
 let existingSubmissionId = null;
 let removeExistingFile = false;
 
+let aiHintsCurrentChallengeId = null;
+const aiHintsCacheByChallenge = new Map();
+
 function solAlert(msg, type = "error") {
   const el = document.getElementById("submit-modal-alert");
   el.textContent = msg;
@@ -1638,6 +1647,161 @@ function showSolFilePreview(file) {
   solFilePreview.textContent = `📎 ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
 }
 
+// ── AI Hints (view-only, sequential unlock) ─────────────────────────────
+function resetHintCards() {
+  for (let level = 1; level <= 4; level += 1) {
+    const card = document.getElementById(`ai-hint-card-${level}`);
+    const text = document.getElementById(`ai-hint-text-${level}`);
+    const btn = document.getElementById(`ai-hint-${level}`);
+    if (card) card.classList.add("ai-hint-card--locked");
+    if (btn) {
+      btn.disabled = level !== 1;
+      btn.textContent = level === 1 ? "🔓 Reveal Hint 1" : `🔒 Reveal Hint ${level}`;
+    }
+    if (text) {
+      if (level === 1) text.textContent = "Locked until you reveal this hint.";
+      if (level === 2) text.textContent = "Unlocks after Hint 1.";
+      if (level === 3) text.textContent = "Unlocks after Hint 2.";
+      if (level === 4) text.textContent = "Unlocks after Hint 3.";
+    }
+  }
+}
+
+function renderUnlockedHints(challengeId) {
+  const state = aiHintsCacheByChallenge.get(challengeId) || { hints: [], unlockedLevel: 0 };
+  const hints = state.hints || [];
+  const unlocked = Number(state.unlockedLevel) || 0;
+
+  for (let level = 1; level <= 4; level += 1) {
+    const card = document.getElementById(`ai-hint-card-${level}`);
+    const text = document.getElementById(`ai-hint-text-${level}`);
+    const btn = document.getElementById(`ai-hint-${level}`);
+    if (!card || !text || !btn) continue;
+
+    if (level <= unlocked) {
+      card.classList.remove("ai-hint-card--locked");
+      const hint = hints[level - 1];
+      text.textContent = String(hint?.text || hint || "Hint unavailable.");
+      btn.disabled = true;
+      btn.textContent = `✅ Hint ${level} revealed`;
+      continue;
+    }
+
+    card.classList.add("ai-hint-card--locked");
+    btn.disabled = level !== unlocked + 1;
+    btn.textContent = level === unlocked + 1 ? `🔓 Reveal Hint ${level}` : `🔒 Reveal Hint ${level}`;
+  }
+}
+
+function setAiHintsLoading(isLoading, text = "Generating hints…") {
+  const wrap = document.getElementById("ai-hints-loading");
+  const textEl = document.getElementById("ai-hints-loading-text");
+  if (!wrap) return;
+  wrap.style.display = isLoading ? "inline-flex" : "none";
+  if (textEl) textEl.textContent = text;
+}
+
+async function ensureHintsLoaded(challengeId, triggerLevel) {
+  const state = aiHintsCacheByChallenge.get(challengeId);
+  if (state && Array.isArray(state.hints)) return true;
+  return true;
+}
+
+async function loadPersistentHintsState(challengeId) {
+  setAiHintsLoading(true, "Loading hint progress…");
+  const res = await api.getHints(challengeId).catch(() => null);
+  setAiHintsLoading(false);
+  if (!res?.success || !Array.isArray(res.hints)) return false;
+
+  const normalized = res.hints.slice(0, 4).map((h, idx) => ({
+    level: Number(h?.level) || idx + 1,
+    text: String(h?.text || "").trim(),
+  }));
+
+  aiHintsCacheByChallenge.set(challengeId, {
+    hints: normalized,
+    unlockedLevel: Number(res.unlockedLevel) || 0,
+  });
+  return true;
+}
+
+async function openAiHintsModal(challengeId) {
+  aiHintsCurrentChallengeId = Number(challengeId);
+
+  const challenge = allChallenges.find((c) => String(c.id) === String(challengeId));
+  const titleEl = document.getElementById("ai-hints-title");
+  if (titleEl) {
+    titleEl.textContent = challenge ? `🤖 AI Hints — ${challenge.title}` : "🤖 AI Hints";
+  }
+
+  resetHintCards();
+
+  const loaded = await loadPersistentHintsState(aiHintsCurrentChallengeId);
+  if (!loaded) {
+    const hintText1 = document.getElementById("ai-hint-text-1");
+    if (hintText1) hintText1.textContent = "Could not load hints right now. Please try again.";
+  }
+
+  renderUnlockedHints(aiHintsCurrentChallengeId);
+
+  const overlay = document.getElementById("ai-hints-modal-overlay");
+  if (overlay) {
+    overlay.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
+}
+
+function closeAiHintsModal(force) {
+  if (force === true || (force && force.target === document.getElementById("ai-hints-modal-overlay"))) {
+    const overlay = document.getElementById("ai-hints-modal-overlay");
+    if (overlay) overlay.style.display = "none";
+    setAiHintsLoading(false);
+    document.body.style.overflow = "";
+  }
+}
+
+window.closeAiHintsModal = closeAiHintsModal;
+
+async function revealHint(level) {
+  if (!aiHintsCurrentChallengeId) return;
+  const challengeId = aiHintsCurrentChallengeId;
+  const state = aiHintsCacheByChallenge.get(challengeId) || { hints: [], unlockedLevel: 0 };
+  const unlocked = Number(state.unlockedLevel) || 0;
+
+  if (level !== unlocked + 1) return;
+
+  const loaded = await ensureHintsLoaded(challengeId, level);
+  if (!loaded) return;
+
+  setAiHintsLoading(true, `Generating hint ${level}…`);
+  const res = await api.getHints(challengeId, level).catch(() => null);
+  setAiHintsLoading(false);
+  if (!res?.success || !Array.isArray(res.hints)) {
+    console.error("[AI Hints API Error]", res);
+    const text = document.getElementById(`ai-hint-text-${level}`);
+    const detail = res?.error?.message || res?.error?.stack || "";
+    if (text) text.textContent = `${res?.message || "Could not unlock this hint right now."}${detail ? `\n\n${detail}` : ""}`;
+    return;
+  }
+
+  const normalized = res.hints.slice(0, 4).map((h, idx) => ({
+    level: Number(h?.level) || idx + 1,
+    text: String(h?.text || "").trim(),
+  }));
+
+  aiHintsCacheByChallenge.set(challengeId, {
+    hints: normalized,
+    unlockedLevel: Number(res.unlockedLevel) || unlocked,
+  });
+
+  renderUnlockedHints(challengeId);
+}
+
+document.getElementById("ai-hint-1")?.addEventListener("click", () => revealHint(1));
+document.getElementById("ai-hint-2")?.addEventListener("click", () => revealHint(2));
+document.getElementById("ai-hint-3")?.addEventListener("click", () => revealHint(3));
+document.getElementById("ai-hint-4")?.addEventListener("click", () => revealHint(4));
+
 // Submit form handler
 document.getElementById("submit-solution-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -1666,7 +1830,11 @@ document.getElementById("submit-solution-form").addEventListener("submit", async
     solAlert(res?.message || "Failed to save submission."); return;
   }
 
-  closeSubmitModal(true);
+  if (res.feedback) {
+    solAlert(`Saved!\n\nAI feedback:\n${res.feedback}`, "success");
+  } else {
+    closeSubmitModal(true);
+  }
 });
 
 // Delete submission handler

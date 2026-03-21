@@ -408,6 +408,52 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════════════
+       AI Hints Modal (per challenge)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="ai-hints-modal-overlay" class="modal-overlay" style="display:none;" onclick="closeAiHintsModal(event)">
+    <div class="modal-box modal-box--wide" role="dialog" aria-modal="true" aria-labelledby="ai-hints-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="ai-hints-title">🤖 AI Hints</h2>
+        <button class="modal-close" onclick="closeAiHintsModal(true)" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="ai-hints">
+          <div class="ai-hints-note">Hints are challenge-specific. Unlock them in order: 1 → 2 → 3 → 4.</div>
+          <div id="ai-hints-loading" class="ai-hints-loading" style="display:none;">
+            <span class="spinner"></span>
+            <span id="ai-hints-loading-text">Generating hints…</span>
+          </div>
+          <div class="ai-hints-actions">
+            <button id="ai-hint-1" type="button" class="btn btn-outline btn-sm">🔓 Reveal Hint 1</button>
+            <button id="ai-hint-2" type="button" class="btn btn-outline btn-sm" disabled>🔒 Reveal Hint 2</button>
+            <button id="ai-hint-3" type="button" class="btn btn-outline btn-sm" disabled>🔒 Reveal Hint 3</button>
+            <button id="ai-hint-4" type="button" class="btn btn-outline btn-sm" disabled>🔒 Reveal Hint 4</button>
+          </div>
+
+          <div class="ai-hints-list">
+            <div id="ai-hint-card-1" class="ai-hint-card ai-hint-card--locked">
+              <div class="ai-hint-card__title">Hint 1</div>
+              <div id="ai-hint-text-1" class="ai-hint-card__text">Locked until you reveal this hint.</div>
+            </div>
+            <div id="ai-hint-card-2" class="ai-hint-card ai-hint-card--locked">
+              <div class="ai-hint-card__title">Hint 2</div>
+              <div id="ai-hint-text-2" class="ai-hint-card__text">Unlocks after Hint 1.</div>
+            </div>
+            <div id="ai-hint-card-3" class="ai-hint-card ai-hint-card--locked">
+              <div class="ai-hint-card__title">Hint 3</div>
+              <div id="ai-hint-text-3" class="ai-hint-card__text">Unlocks after Hint 2.</div>
+            </div>
+            <div id="ai-hint-card-4" class="ai-hint-card ai-hint-card--locked">
+              <div class="ai-hint-card__title">Hint 4</div>
+              <div id="ai-hint-text-4" class="ai-hint-card__text">Unlocks after Hint 3.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
        Reported Comments Modal (admin only)
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="reported-comments-overlay" class="modal-overlay" style="display:none;padding:0;" onclick="closeReportedCommentsModal(event)">

@@ -1,5 +1,6 @@
 import { requireAuth } from "../../middleware/auth.js";
 import { json } from "../../utils/response.js";
+import { generateSubmissionFeedback } from "../../services/aiAssist.js";
 
 /**
  * POST /api/challenges/:id/submit
@@ -16,7 +17,7 @@ export async function handleSubmit(request, env, challengeId) {
 
   // Check challenge exists and is still active
   const challenge = await env.DB.prepare(
-    "SELECT id, last_date FROM challenges WHERE id = ?"
+    "SELECT id, title, description, last_date, answer_description FROM challenges WHERE id = ?"
   ).bind(id).first();
 
   if (!challenge) return json({ success: false, message: "Challenge not found" }, 404);
@@ -92,7 +93,23 @@ export async function handleSubmit(request, env, challengeId) {
     ).bind(id, session.userId, solutionText || null, fileKey, fileName, fileType, now, now).run();
   }
 
-  return json({ success: true, message: existing ? "Submission updated." : "Solution submitted!" });
+  let feedback = null;
+  try {
+    if (solutionText) {
+      feedback = await generateSubmissionFeedback(env, {
+        challenge,
+        solutionText,
+      });
+    }
+  } catch (e) {
+    console.error("[submit] AI feedback failed:", e);
+  }
+
+  return json({
+    success: true,
+    message: existing ? "Submission updated." : "Solution submitted!",
+    feedback: feedback || undefined,
+  });
 }
 
 function getExt(filename) {

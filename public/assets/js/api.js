@@ -8,7 +8,32 @@ async function apiFetch(path, options = {}) {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     credentials: "include",
   });
-  return res.json();
+
+  const raw = await res.text();
+  let data = null;
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok) {
+    if (data && typeof data === "object") {
+      return {
+        success: false,
+        status: res.status,
+        ...data,
+      };
+    }
+    return {
+      success: false,
+      status: res.status,
+      message: raw || `HTTP ${res.status}`,
+    };
+  }
+
+  if (data && typeof data === "object") return data;
+  return { success: true, data: raw };
 }
 
 const api = {
@@ -252,5 +277,18 @@ const api = {
   /** PATCH /api/admin/rewards/claims/:id/reject */
   adminRejectClaim(id) {
     return apiFetch(`/api/admin/rewards/claims/${id}/reject`, { method: "PATCH" });
+  },
+
+  // ── AI assistance ───────────────────────────────────────────────────────
+
+  /** POST /api/ai/hints */
+  getHints(challengeId, revealLevel = null) {
+    return apiFetch("/api/ai/hints", {
+      method: "POST",
+      body: JSON.stringify({
+        challengeId,
+        ...(revealLevel ? { revealLevel } : {}),
+      }),
+    });
   },
 };
