@@ -3,106 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Challenge Accepted – Login</title>
+  <title>Challenge Accepted - Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/base.css" />
+  <link rel="stylesheet" href="/assets/css/components.css" />
+  <link rel="stylesheet" href="/assets/css/login.css" />
 </head>
-<body>
-  <div class="page-center">
-    <div class="card">
-
-      <!-- Branding -->
-      <div class="auth-logo">
-        <div class="auth-logo__icon">🎯</div>
-        <div class="auth-logo__title">Challenge Accepted</div>
-        <div class="auth-logo__sub">The challenge is live. Are you?</div>
+<body class="login-body">
+  <div class="login-shell">
+    <aside class="login-showcase">
+      <a href="/" class="login-brand" aria-label="Go to home">
+        <span class="login-brand__icon">CA</span>
+        <span class="login-brand__text">Challenge Accepted</span>
+      </a>
+      <h1 class="login-showcase__title">Assessments that feel like a real product.</h1>
+      <p class="login-showcase__sub">
+        Publish coding challenges, review submissions, grade reliably, and reward progress in one clean workflow.
+      </p>
+      <div class="login-showcase__grid" aria-label="Platform highlights">
+        <div class="login-showcase__item">
+          <div class="login-showcase__label">Challenge Ops</div>
+          <div class="login-showcase__value">Publish and schedule tasks</div>
+        </div>
+        <div class="login-showcase__item">
+          <div class="login-showcase__label">Scoring Engine</div>
+          <div class="login-showcase__value">Points, streaks, and rewards</div>
+        </div>
+        <div class="login-showcase__item">
+          <div class="login-showcase__label">Moderation</div>
+          <div class="login-showcase__value">Reports, visibility, and control</div>
+        </div>
       </div>
+      <div class="login-showcase__foot">Secure OTP sign-in for admins and participants.</div>
+    </aside>
 
-      <!-- Step indicator -->
-      <div class="steps">
-        <div class="step-dot active" id="step-email"></div>
-        <div class="step-dot" id="step-otp"></div>
+    <section class="login-auth">
+      <div class="card auth-card">
+        <div class="auth-logo">
+          <div class="auth-logo__icon">CA</div>
+          <div class="auth-logo__title">Welcome back</div>
+          <div class="auth-logo__sub">Sign in to continue to your workspace.</div>
+        </div>
+
+        <div class="steps">
+          <div class="step-dot active" id="step-email"></div>
+          <div class="step-dot" id="step-otp"></div>
+        </div>
+
+        <div id="email-section">
+          <div class="alert" id="email-alert"></div>
+
+          <form id="email-form" novalidate>
+            <div class="form-group" id="name-group" style="display:none;">
+              <label class="form-label" for="name">Full Name</label>
+              <input
+                id="name"
+                type="text"
+                class="form-input"
+                placeholder="Your full name"
+                autocomplete="name"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="email">Email address</label>
+              <input
+                id="email"
+                type="email"
+                class="form-input"
+                placeholder="you@example.com"
+                required
+                autocomplete="email"
+              />
+            </div>
+
+            <button id="email-btn" type="submit" class="btn btn-primary btn-full">
+              <span id="email-spinner" class="spinner" style="display:none;"></span>
+              Continue with Email
+            </button>
+          </form>
+        </div>
+
+        <div id="otp-section" style="display:none;">
+          <button class="back-link" id="back-btn">Back</button>
+
+          <p class="otp-hint">
+            We sent a 6-digit code to <strong id="otp-email-hint"></strong>
+          </p>
+
+          <div class="alert" id="otp-alert"></div>
+
+          <form id="otp-form" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="otp">Verification code</label>
+              <input
+                id="otp"
+                type="text"
+                inputmode="numeric"
+                pattern="\d{6}"
+                maxlength="6"
+                class="form-input otp-input"
+                placeholder="000000"
+                autocomplete="one-time-code"
+                required
+              />
+            </div>
+
+            <button id="otp-btn" type="submit" class="btn btn-primary btn-full">
+              <span id="otp-spinner" class="spinner" style="display:none;"></span>
+              Verify and Sign In
+            </button>
+          </form>
+
+          <div class="divider">or</div>
+
+          <button id="resend-btn" class="btn btn-outline btn-full">Resend OTP</button>
+        </div>
       </div>
-
-      <!-- ── Step 1: Email ─────────────────────────────────────────── -->
-      <div id="email-section">
-        <div class="alert" id="email-alert"></div>
-
-        <form id="email-form" novalidate>
-          <!-- Name (hidden initially, shown for new users) -->
-          <div class="form-group" id="name-group" style="display:none;">
-            <label class="form-label" for="name">Full Name</label>
-            <input
-              id="name"
-              type="text"
-              class="form-input"
-              placeholder="Your full name"
-              autocomplete="name"
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="email">Email address</label>
-            <input
-              id="email"
-              type="email"
-              class="form-input"
-              placeholder="you@example.com"
-              required
-              autocomplete="email"
-            />
-          </div>
-
-          <button id="email-btn" type="submit" class="btn btn-primary btn-full">
-            <span id="email-spinner" class="spinner" style="display:none;"></span>
-            Continue with Email
-          </button>
-        </form>
-      </div>
-
-      <!-- ── Step 2: OTP ───────────────────────────────────────────── -->
-      <div id="otp-section" style="display:none;">
-        <button class="back-link" id="back-btn">
-          
-          
-          
-          ← Back</button>
-
-        <p style="font-size:14px;color:#6b7280;margin-bottom:20px;">
-          We sent a 6-digit code to <strong id="otp-email-hint" style="color:#374151;"></strong>
-        </p>
-
-        <div class="alert" id="otp-alert"></div>
-
-        <form id="otp-form" novalidate>
-          <div class="form-group">
-            <label class="form-label" for="otp">Verification code</label>
-            <input
-              id="otp"
-              type="text"
-              inputmode="numeric"
-              pattern="\d{6}"
-              maxlength="6"
-              class="form-input otp-input"
-              placeholder="000000"
-              autocomplete="one-time-code"
-              required
-            />
-          </div>
-
-          <button id="otp-btn" type="submit" class="btn btn-primary btn-full">
-            <span id="otp-spinner" class="spinner" style="display:none;"></span>
-            Verify &amp; Sign In
-          </button>
-        </form>
-
-        <div class="divider">or</div>
-
-        <button id="resend-btn" class="btn btn-outline btn-full">Resend OTP</button>
-      </div>
-
-    </div>
+    </section>
   </div>
 
   <script src="/assets/js/api.js"></script>

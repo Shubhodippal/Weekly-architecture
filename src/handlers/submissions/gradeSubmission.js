@@ -2,20 +2,7 @@ import { requireAuth } from "../../middleware/auth.js";
 import { requireAdmin } from "../../middleware/rbac.js";
 import { json } from "../../utils/response.js";
 import { sendEvaluationEmail } from "../../utils/email.js";
-
-const GRADE_POINTS = {
-  wrong:   0,
-  partial: 5,
-  almost:  15,
-  correct: 20,
-};
-
-const GRADE_LABELS = {
-  wrong:   "Wrong",
-  partial: "Partially Correct",
-  almost:  "Almost Correct",
-  correct: "Correct",
-};
+import { getGradingPoints, GRADE_LABELS } from "../../utils/gradingSettings.js";
 
 /**
  * PATCH /api/submissions/:id/grade
@@ -35,12 +22,13 @@ export async function handleGradeSubmission(request, env, submissionId) {
   try { body = await request.json(); }
   catch { return json({ success: false, message: "Invalid JSON body" }, 400); }
 
+  const gradePoints = await getGradingPoints(env);
   const { grade, remark = "" } = body;
-  if (!Object.prototype.hasOwnProperty.call(GRADE_POINTS, grade)) {
+  if (!Object.prototype.hasOwnProperty.call(gradePoints, grade)) {
     return json({ success: false, message: "grade must be one of: wrong, partial, almost, correct" }, 400);
   }
 
-  const points = GRADE_POINTS[grade];
+  const points = gradePoints[grade];
 
   // Fetch submission + user + challenge info for email
   const row = await env.DB.prepare(`

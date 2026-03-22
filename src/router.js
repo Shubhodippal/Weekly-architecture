@@ -6,6 +6,8 @@ import { handleLeaderboard } from "./handlers/user/leaderboard.js";
 import { handleListUsers } from "./handlers/admin/listUsers.js";
 import { handleDeleteUser } from "./handlers/admin/deleteUser.js";
 import { handleAdjustPoints } from "./handlers/admin/adjustPoints.js";
+import { handleAdminGetGradingSettings } from "./handlers/admin/getGradingSettings.js";
+import { handleAdminUpdateGradingSettings } from "./handlers/admin/updateGradingSettings.js";
 import { handleTriggerAutoChallenge } from "./handlers/admin/triggerAutoChallenge.js";
 import { handlePostChallenge } from "./handlers/challenges/postChallenge.js";
 import { handleListChallenges } from "./handlers/challenges/listChallenges.js";
@@ -29,6 +31,17 @@ import { handleAdminUpdateRewardTier } from "./handlers/rewards/adminUpdateRewar
 import { handleAdminListClaims } from "./handlers/rewards/adminListClaims.js";
 import { handleAdminFulfillClaim } from "./handlers/rewards/adminFulfillClaim.js";
 import { handleAdminRejectClaim } from "./handlers/rewards/adminRejectClaim.js";
+import { handleGetFinanceOverview } from "./handlers/finance/getFinanceOverview.js";
+import { handleOpenInvestment } from "./handlers/finance/openInvestment.js";
+import { handleCloseInvestment } from "./handlers/finance/closeInvestment.js";
+import { handleBankingOverview } from "./handlers/banking/getOverview.js";
+import { handleApplyCreditCard } from "./handlers/banking/applyCreditCard.js";
+import { handleDebitSpend } from "./handlers/banking/debitSpend.js";
+import { handleCreditSpend } from "./handlers/banking/creditSpend.js";
+import { handleCreditPay } from "./handlers/banking/creditPay.js";
+import { handleOpenFdInvestment } from "./handlers/banking/openFdInvestment.js";
+import { handleOpenRdInvestment } from "./handlers/banking/openRdInvestment.js";
+import { handleCloseBankingInvestment } from "./handlers/banking/closeBankingInvestment.js";
 import { handleListComments } from "./handlers/comments/listComments.js";
 import { handlePostComment } from "./handlers/comments/postComment.js";
 import { handleDeleteComment } from "./handlers/comments/deleteComment.js";
@@ -76,6 +89,12 @@ export async function router(request, env) {
     const adjustPointsMatch = pathname.match(/^\/api\/admin\/users\/(\d+)\/points$/);
     if (method === "PATCH" && adjustPointsMatch)
       return handleAdjustPoints(request, env, adjustPointsMatch[1]);
+
+    if (method === "GET" && pathname === "/api/admin/grading/settings")
+      return handleAdminGetGradingSettings(request, env);
+
+    if (method === "PATCH" && pathname === "/api/admin/grading/settings")
+      return handleAdminUpdateGradingSettings(request, env);
 
     if (method === "POST" && pathname === "/api/admin/challenges/auto-post")
       return handleTriggerAutoChallenge(request, env);
@@ -176,6 +195,43 @@ export async function router(request, env) {
       if (rewardActionMatch[2] === "claim") return handleClaimReward(request, env, rewardActionMatch[1]);
       if (rewardActionMatch[2] === "pass")  return handlePassReward(request, env, rewardActionMatch[1]);
     }
+
+    // Points Finance routes (user)
+    if (method === "GET" && pathname === "/api/points/finance")
+      return handleGetFinanceOverview(request, env);
+
+    if (method === "POST" && pathname === "/api/points/finance/open")
+      return handleOpenInvestment(request, env);
+
+    const closeInvestmentMatch = pathname.match(/^\/api\/points\/finance\/(\d+)\/close$/);
+    if (method === "POST" && closeInvestmentMatch)
+      return handleCloseInvestment(request, env, closeInvestmentMatch[1]);
+
+    // Banking routes (user)
+    if (method === "GET" && pathname === "/api/banking/overview")
+      return handleBankingOverview(request, env);
+
+    if (method === "POST" && pathname === "/api/banking/credit-card/apply")
+      return handleApplyCreditCard(request, env);
+
+    if (method === "POST" && pathname === "/api/banking/debit/spend")
+      return handleDebitSpend(request, env);
+
+    if (method === "POST" && pathname === "/api/banking/credit/spend")
+      return handleCreditSpend(request, env);
+
+    if (method === "POST" && pathname === "/api/banking/credit/pay")
+      return handleCreditPay(request, env);
+
+    if (method === "POST" && pathname === "/api/banking/investments/fd")
+      return handleOpenFdInvestment(request, env);
+
+    if (method === "POST" && pathname === "/api/banking/investments/rd")
+      return handleOpenRdInvestment(request, env);
+
+    const closeBankingInvMatch = pathname.match(/^\/api\/banking\/investments\/(\d+)\/close$/);
+    if (method === "POST" && closeBankingInvMatch)
+      return handleCloseBankingInvestment(request, env, closeBankingInvMatch[1]);
 
     // Reward routes (admin)
     if (method === "GET"  && pathname === "/api/admin/rewards/tiers")

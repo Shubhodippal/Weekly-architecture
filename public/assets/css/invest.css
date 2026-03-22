@@ -1,0 +1,344 @@
+.invest-body {
+  min-height: 100vh;
+  padding-top: 72px;
+  background:
+    radial-gradient(1200px 500px at 0% 0%, rgba(99, 102, 241, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, rgba(56, 189, 248, 0.09), transparent 60%),
+    #f4f6fb;
+}
+
+.invest-main {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.invest-hero {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f8ff 62%, #f3fbff 100%);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.invest-hero__head {
+  max-width: 880px;
+}
+
+.invest-hero__eyebrow {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.invest-hero__title {
+  margin-top: 10px;
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.15;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.invest-hero__sub {
+  margin-top: 8px;
+  max-width: 780px;
+  font-size: 15px;
+  color: #475569;
+}
+
+.invest-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.balance-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.balance-card--debit {
+  background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
+}
+
+.balance-card--credit {
+  background: linear-gradient(135deg, #fff1f2 0%, #ffffff 100%);
+}
+
+.balance-card--available {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.balance-card__label {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.balance-card__value {
+  margin-top: 8px;
+  font-size: clamp(24px, 2.5vw, 34px);
+  line-height: 1.05;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.balance-card__meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.invest-panel {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+  padding: 18px;
+}
+
+.invest-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.invest-panel__head h2 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.invest-panel__meta {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bank-card {
+  border: 1px solid #dbe4ff;
+  border-radius: 16px;
+  padding: 14px;
+  background: #f8faff;
+}
+
+.bank-card--credit {
+  border-color: #ffd8df;
+  background: #fff7f8;
+}
+
+.bank-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.bank-card__title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.bank-card__last4 {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 700;
+}
+
+.bank-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  padding: 7px 0;
+  border-bottom: 1px solid #eaf0ff;
+}
+
+.bank-card__row:last-child {
+  border-bottom: none;
+}
+
+.credit-placeholder {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px dashed #fda4af;
+  background: #fff;
+  display: grid;
+  gap: 10px;
+}
+
+.credit-placeholder p {
+  font-size: 14px;
+  color: #475569;
+}
+
+.inline-form {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.inline-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.inline-form__grid--single {
+  grid-template-columns: 1fr;
+}
+
+.invest-open-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.invest-hint {
+  margin-top: -4px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.investment-list {
+  display: grid;
+  gap: 10px;
+}
+
+.investment-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fcfdff;
+}
+
+.investment-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.investment-item__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.investment-item__status {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.investment-item__status--active {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.investment-item__status--matured {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.investment-item__status--closed {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.investment-item__meta {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.investment-item__meta div {
+  font-size: 12px;
+  color: #475569;
+}
+
+.investment-item__meta strong {
+  display: block;
+  margin-top: 2px;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.investment-item__actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1050px) {
+  .invest-main {
+    padding: 18px;
+  }
+
+  .cards-grid,
+  .invest-open-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .invest-hero__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .investment-item__meta {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .invest-body {
+    padding-top: 64px;
+  }
+
+  .invest-main {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .invest-hero,
+  .invest-panel {
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .invest-panel__head h2 {
+    font-size: 18px;
+  }
+
+  .inline-form__grid,
+  .investment-item__meta {
+    grid-template-columns: 1fr;
+  }
+}

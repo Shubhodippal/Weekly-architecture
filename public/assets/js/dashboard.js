@@ -7,6 +7,10 @@ let pendingUnlocks  = [];   // reward unlocks not yet acted on
 let unlockQueueIdx  = 0;    // which pending unlock we're showing
 const commentsByChallenge = new Map();
 const commentSortByChallenge = new Map();
+const DEFAULT_GRADE_POINTS = { wrong: 0, partial: 5, almost: 15, correct: 20 };
+const DEFAULT_HINT_COSTS = { 1: 0, 2: 5, 3: 10, 4: 15 };
+let gradePointsByGrade = { ...DEFAULT_GRADE_POINTS };
+let gradePointsLoaded = false;
 
 function renderLeaderboard(leaderboard = [], meRow = null) {
   const el = document.getElementById("leaderboard-list");
@@ -121,6 +125,24 @@ function timeAgo(input) {
 function showFeedAlert(msg) {
   document.getElementById("feed-list").innerHTML =
     `<div class="feed-empty"><div style="font-size:32px;">⚠️</div>${esc(msg)}</div>`;
+}
+
+function fmtPts(value) {
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+async function ensureGradePointsLoaded(force = false) {
+  if (currentUser?.role !== "admin") return gradePointsByGrade;
+  if (gradePointsLoaded && !force) return gradePointsByGrade;
+
+  const res = await api.adminGetGradingSettings().catch(() => null);
+  if (res?.success && res.settings) {
+    gradePointsByGrade = { ...DEFAULT_GRADE_POINTS, ...res.settings };
+    gradePointsLoaded = true;
+  } else {
+    gradePointsByGrade = { ...DEFAULT_GRADE_POINTS };
+  }
+  return gradePointsByGrade;
 }
 
 // ── Feed rendering ────────────────────────────────────────────────────────
@@ -1496,6 +1518,145 @@ window.doPassReward        = doPassReward;
 window.closeRewardPopup    = closeRewardPopup;
 window.doClaimPassedReward = doClaimPassedReward;
 
+const DEFAULT_FINANCE_RATES = { fd: 8, rd: 10 };
+let financeRates = { ...DEFAULT_FINANCE_RATES };
+
+function fmtRate(rate) {
+  const n = Number(rate);
+  if (Number.isNaN(n)) return "0";
+  return n.toFixed(2).replace(/\.00$/, "");
+}
+
+function financeAlert(msg, type = "info") {
+  const el = document.getElementById("finance-alert");
+  if (!el) return;
+  if (!msg) {
+    el.textContent = "";
+    el.className = "alert";
+    return;
+  }
+  el.textContent = msg;
+  el.className = `alert alert-${type} show`;
+}
+
+function renderFinanceOverview(data) {
+  if (!data) return;
+
+  financeRates = { ...DEFAULT_FINANCE_RATES, ...(data.finance_rates || {}) };
+  const ratesEl = document.getElementById("finance-rates");
+  if (ratesEl) {
+    ratesEl.textContent = `FD ${fmtRate(financeRates.fd)}% • RD ${fmtRate(financeRates.rd)}%`;
+  }
+
+  if (data.balance !== undefined) {
+    const pointsEl = document.getElementById("points-value");
+    if (pointsEl) pointsEl.textContent = String(data.balance);
+  }
+
+  const listEl = document.getElementById("finance-investments-list");
+  if (!listEl) return;
+  const investments = Array.isArray(data.investments) ? data.investments : [];
+
+  if (!investments.length) {
+    listEl.innerHTML = '<div class="comments-empty">No FD/RD plan yet.</div>';
+    return;
+  }
+
+  listEl.innerHTML = investments.slice(0, 8).map((inv) => {
+    const plan = String(inv.plan_type || "fd").toUpperCase();
+    const isClosed = inv.status === "closed";
+    const isMatured = !!inv.can_close;
+    const statusClass = isClosed
+      ? "finance-item__status--closed"
+      : isMatured
+        ? "finance-item__status--matured"
+        : "finance-item__status--active";
+    const statusLabel = isClosed ? "Closed" : isMatured ? "Matured" : "Active";
+
+    return `
+      <div class="finance-item">
+        <div class="finance-item__top">
+          <span class="finance-item__plan">${plan}</span>
+          <span class="finance-item__status ${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="finance-item__meta">
+          ${inv.principal_points} pts for ${inv.tenure_days}d @ ${fmtRate(inv.annual_rate)}%<br />
+          Maturity: ${fmtDateTime(inv.maturity_at)}<br />
+          Payout: ${inv.payout_points} pts
+        </div>
+        ${isMatured ? `<button class="btn btn-primary btn-sm finance-item__close" onclick="closeFinanceInvestment(${inv.id})">Close & Credit</button>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+async function loadFinanceOverview() {
+  const res = await api.getPointsFinanceOverview().catch(() => null);
+  if (!res?.success) {
+    financeAlert(res?.message || "Could not load finance plans.", "error");
+    return;
+  }
+  financeAlert("");
+  renderFinanceOverview(res);
+}
+
+async function openFinanceInvestment() {
+  const planType = String(document.getElementById("finance-plan")?.value || "fd").toLowerCase();
+  const principalPoints = Number.parseInt(document.getElementById("finance-principal")?.value, 10);
+  const tenureDays = Number.parseInt(document.getElementById("finance-tenure")?.value, 10);
+  if (!Number.isInteger(principalPoints) || principalPoints <= 0) {
+    financeAlert("Enter a valid positive point amount.", "error");
+    return;
+  }
+  if (!Number.isInteger(tenureDays) || tenureDays < 1 || tenureDays > 3650) {
+    financeAlert("Tenure must be between 1 and 3650 days.", "error");
+    return;
+  }
+
+  const btn = document.getElementById("finance-open-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Opening...";
+  }
+
+  const res = await api.openPointsFinance({
+    plan_type: planType,
+    principal_points: principalPoints,
+    tenure_days: tenureDays,
+  }).catch(() => null);
+
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "Open FD/RD";
+  }
+
+  if (!res?.success) {
+    financeAlert(res?.message || "Failed to open investment.", "error");
+    return;
+  }
+
+  document.getElementById("finance-principal").value = "";
+  financeAlert(res.message || "Investment opened.", "success");
+  await loadFinanceOverview();
+  await loadLeaderboard();
+  if (currentUser?.role !== "admin") await loadRewards();
+}
+
+async function closeFinanceInvestment(id) {
+  const res = await api.closePointsFinance(id).catch(() => null);
+  if (!res?.success) {
+    financeAlert(res?.message || "Could not close this investment yet.", "error");
+    return;
+  }
+
+  financeAlert(res.message || "Investment closed successfully.", "success");
+  await loadFinanceOverview();
+  await loadLeaderboard();
+  if (currentUser?.role !== "admin") await loadRewards();
+}
+
+window.closeFinanceInvestment = closeFinanceInvestment;
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────
 (async () => {
   const me = await api.me().catch(() => null);
@@ -1516,7 +1677,10 @@ window.doClaimPassedReward = doClaimPassedReward;
     document.getElementById("filter-scheduled").style.display    = "inline-block";
     document.getElementById("btn-manage-users").style.display    = "inline-flex";
     document.getElementById("btn-rewards").style.display         = "inline-flex";
+    document.getElementById("btn-grading").style.display         = "inline-flex";
     document.getElementById("admin-sidebar-links").style.display = "block";
+  } else {
+    document.getElementById("btn-invest").style.display = "inline-flex";
   }
 
   // Left sidebar profile
@@ -1535,6 +1699,12 @@ window.doClaimPassedReward = doClaimPassedReward;
     const ptEl = document.getElementById("user-points");
     ptEl.style.display = "block";
     document.getElementById("points-value").textContent = me.user.total_points;
+
+    const financeWrap = document.getElementById("finance-sidebar-wrapper");
+    if (financeWrap) financeWrap.style.display = "block";
+    const investLink = document.getElementById("sidebar-invest-link");
+    if (investLink) investLink.style.display = "block";
+    document.getElementById("finance-open-btn")?.addEventListener("click", openFinanceInvestment);
   }
 
   // Set min date for new challenges
@@ -1550,7 +1720,12 @@ window.doClaimPassedReward = doClaimPassedReward;
   await loadLeaderboard();
 
   // Load rewards (non-admin only)
-  if (role !== "admin") await loadRewards();
+  if (role !== "admin") {
+    await Promise.all([
+      loadRewards(),
+      loadFinanceOverview(),
+    ]);
+  }
 })();
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1648,7 +1823,46 @@ function showSolFilePreview(file) {
 }
 
 // ── AI Hints (view-only, sequential unlock) ─────────────────────────────
-function resetHintCards() {
+function normalizeHintCosts(raw) {
+  const costs = { ...DEFAULT_HINT_COSTS };
+  if (raw && typeof raw === "object") {
+    for (let level = 1; level <= 4; level += 1) {
+      const value = parseInt(raw[level] ?? raw[String(level)], 10);
+      if (!Number.isNaN(value) && value >= 0) costs[level] = value;
+    }
+  }
+  costs[1] = 0;
+  return costs;
+}
+
+function hintUnlockLabel(level, hintCosts) {
+  const cost = Number(hintCosts[level] || 0);
+  return cost > 0 ? `Unlock Hint ${level} (${cost} pts)` : `Unlock Hint ${level} (Free)`;
+}
+
+function updateAiHintsMeta(challengeId) {
+  const noteEl = document.getElementById("ai-hints-note");
+  const balanceEl = document.getElementById("ai-hints-balance");
+  const state = aiHintsCacheByChallenge.get(challengeId) || {};
+  const hintCosts = normalizeHintCosts(state.hintCosts);
+  const balance = Number(state.balance || 0);
+
+  if (noteEl) {
+    noteEl.textContent =
+      `Hints are challenge-specific. Hint 1 is free. ` +
+      `Hint 2 costs ${hintCosts[2]} pts, Hint 3 costs ${hintCosts[3]} pts, Hint 4 costs ${hintCosts[4]} pts. ` +
+      `Hints can still be unlocked when balance is low, and points may go negative.`;
+  }
+  if (balanceEl) {
+    balanceEl.textContent = `Available points: ${balance} pts`;
+  }
+}
+
+function resetHintCards(challengeId = null) {
+  const hintCosts = challengeId
+    ? normalizeHintCosts((aiHintsCacheByChallenge.get(challengeId) || {}).hintCosts)
+    : { ...DEFAULT_HINT_COSTS };
+
   for (let level = 1; level <= 4; level += 1) {
     const card = document.getElementById(`ai-hint-card-${level}`);
     const text = document.getElementById(`ai-hint-text-${level}`);
@@ -1656,21 +1870,27 @@ function resetHintCards() {
     if (card) card.classList.add("ai-hint-card--locked");
     if (btn) {
       btn.disabled = level !== 1;
-      btn.textContent = level === 1 ? "🔓 Reveal Hint 1" : `🔒 Reveal Hint ${level}`;
+      btn.textContent = level === 1 ? hintUnlockLabel(level, hintCosts) : `Locked Hint ${level}`;
     }
     if (text) {
-      if (level === 1) text.textContent = "Locked until you reveal this hint.";
-      if (level === 2) text.textContent = "Unlocks after Hint 1.";
-      if (level === 3) text.textContent = "Unlocks after Hint 2.";
-      if (level === 4) text.textContent = "Unlocks after Hint 3.";
+      if (level === 1) text.textContent = "Hint 1 is free. Unlock to reveal.";
+      if (level === 2) text.textContent = `Unlocks after Hint 1. Cost: ${hintCosts[2]} pts.`;
+      if (level === 3) text.textContent = `Unlocks after Hint 2. Cost: ${hintCosts[3]} pts.`;
+      if (level === 4) text.textContent = `Unlocks after Hint 3. Cost: ${hintCosts[4]} pts.`;
     }
   }
+
+  if (challengeId) updateAiHintsMeta(challengeId);
 }
 
 function renderUnlockedHints(challengeId) {
-  const state = aiHintsCacheByChallenge.get(challengeId) || { hints: [], unlockedLevel: 0 };
+  const state = aiHintsCacheByChallenge.get(challengeId) || { hints: [], unlockedLevel: 0, hintCosts: DEFAULT_HINT_COSTS, balance: 0 };
   const hints = state.hints || [];
   const unlocked = Number(state.unlockedLevel) || 0;
+  const hintCosts = normalizeHintCosts(state.hintCosts);
+  const balance = Number(state.balance || 0);
+
+  updateAiHintsMeta(challengeId);
 
   for (let level = 1; level <= 4; level += 1) {
     const card = document.getElementById(`ai-hint-card-${level}`);
@@ -1683,13 +1903,25 @@ function renderUnlockedHints(challengeId) {
       const hint = hints[level - 1];
       text.textContent = String(hint?.text || hint || "Hint unavailable.");
       btn.disabled = true;
-      btn.textContent = `✅ Hint ${level} revealed`;
+      btn.textContent = `Hint ${level} unlocked`;
       continue;
     }
 
     card.classList.add("ai-hint-card--locked");
-    btn.disabled = level !== unlocked + 1;
-    btn.textContent = level === unlocked + 1 ? `🔓 Reveal Hint ${level}` : `🔒 Reveal Hint ${level}`;
+    const isNext = level === unlocked + 1;
+    const cost = Number(hintCosts[level] || 0);
+
+    if (isNext) {
+      btn.disabled = false;
+      btn.textContent = hintUnlockLabel(level, hintCosts);
+    } else {
+      btn.disabled = true;
+      btn.textContent = `Locked Hint ${level}`;
+    }
+
+    if (text && isNext && cost > 0) {
+      text.textContent = `Unlock this hint for ${cost} pts. Current balance: ${balance} pts (can go negative).`;
+    }
   }
 }
 
@@ -1721,6 +1953,8 @@ async function loadPersistentHintsState(challengeId) {
   aiHintsCacheByChallenge.set(challengeId, {
     hints: normalized,
     unlockedLevel: Number(res.unlockedLevel) || 0,
+    hintCosts: normalizeHintCosts(res.hint_costs),
+    balance: Number(res.balance || 0),
   });
   return true;
 }
@@ -1734,7 +1968,7 @@ async function openAiHintsModal(challengeId) {
     titleEl.textContent = challenge ? `🤖 AI Hints — ${challenge.title}` : "🤖 AI Hints";
   }
 
-  resetHintCards();
+  resetHintCards(aiHintsCurrentChallengeId);
 
   const loaded = await loadPersistentHintsState(aiHintsCurrentChallengeId);
   if (!loaded) {
@@ -1765,15 +1999,16 @@ window.closeAiHintsModal = closeAiHintsModal;
 async function revealHint(level) {
   if (!aiHintsCurrentChallengeId) return;
   const challengeId = aiHintsCurrentChallengeId;
-  const state = aiHintsCacheByChallenge.get(challengeId) || { hints: [], unlockedLevel: 0 };
+  const state = aiHintsCacheByChallenge.get(challengeId) || { hints: [], unlockedLevel: 0, hintCosts: DEFAULT_HINT_COSTS, balance: 0 };
   const unlocked = Number(state.unlockedLevel) || 0;
+  const hintCosts = normalizeHintCosts(state.hintCosts);
 
   if (level !== unlocked + 1) return;
 
   const loaded = await ensureHintsLoaded(challengeId, level);
   if (!loaded) return;
 
-  setAiHintsLoading(true, `Generating hint ${level}…`);
+  setAiHintsLoading(true, `Unlocking hint ${level}...`);
   const res = await api.getHints(challengeId, level).catch(() => null);
   setAiHintsLoading(false);
   if (!res?.success || !Array.isArray(res.hints)) {
@@ -1781,6 +2016,15 @@ async function revealHint(level) {
     const text = document.getElementById(`ai-hint-text-${level}`);
     const detail = res?.error?.message || res?.error?.stack || "";
     if (text) text.textContent = `${res?.message || "Could not unlock this hint right now."}${detail ? `\n\n${detail}` : ""}`;
+    if (res?.hint_costs || res?.balance !== undefined) {
+      aiHintsCacheByChallenge.set(challengeId, {
+        hints: state.hints || [],
+        unlockedLevel: unlocked,
+        hintCosts: normalizeHintCosts(res.hint_costs || hintCosts),
+        balance: Number(res.balance ?? state.balance ?? 0),
+      });
+      renderUnlockedHints(challengeId);
+    }
     return;
   }
 
@@ -1792,6 +2036,8 @@ async function revealHint(level) {
   aiHintsCacheByChallenge.set(challengeId, {
     hints: normalized,
     unlockedLevel: Number(res.unlockedLevel) || unlocked,
+    hintCosts: normalizeHintCosts(res.hint_costs || hintCosts),
+    balance: Number(res.balance ?? state.balance ?? 0),
   });
 
   renderUnlockedHints(challengeId);
@@ -1875,6 +2121,8 @@ async function openViewSubmissionsModal(challengeId) {
   document.getElementById("view-submissions-overlay").style.display = "flex";
   document.body.style.overflow = "hidden";
 
+  await ensureGradePointsLoaded();
+
   const challenge = allChallenges.find((c) => String(c.id) === String(challengeId));
   document.getElementById("vs-title").textContent = `👁 Submissions — ${challenge ? challenge.title : ""}`;
 
@@ -1949,10 +2197,10 @@ async function openViewSubmissionsModal(challengeId) {
             <label>Grade</label>
             <select class="grade-select form-input" style="max-width:240px;font-size:13px;">
               <option value="">— Select grade —</option>
-              ${gradeOpt("wrong",   "❌ Wrong (0 pts)")}
-              ${gradeOpt("partial", "🔶 Partially Correct (5 pts)")}
-              ${gradeOpt("almost",  "🔷 Almost Correct (15 pts)")}
-              ${gradeOpt("correct", "✅ Correct (20 pts)")}
+              ${gradeOpt("wrong",   `❌ Wrong (${fmtPts(gradePointsByGrade.wrong ?? DEFAULT_GRADE_POINTS.wrong)} pts)`)}
+              ${gradeOpt("partial", `🔶 Partially Correct (${fmtPts(gradePointsByGrade.partial ?? DEFAULT_GRADE_POINTS.partial)} pts)`)}
+              ${gradeOpt("almost",  `🔷 Almost Correct (${fmtPts(gradePointsByGrade.almost ?? DEFAULT_GRADE_POINTS.almost)} pts)`)}
+              ${gradeOpt("correct", `✅ Correct (${fmtPts(gradePointsByGrade.correct ?? DEFAULT_GRADE_POINTS.correct)} pts)`)}
             </select>
           </div>
           <div class="grade-panel__row">

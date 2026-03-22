@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grading Settings - Challenge Accepted</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/base.css" />
+  <link rel="stylesheet" href="/assets/css/components.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body class="admin-body">
+  <nav class="topbar">
+    <a href="/dashboard.html" class="topbar__logo">Challenge Accepted</a>
+    <div class="topbar__right">
+      <a href="/dashboard.html" class="btn btn-ghost btn-sm">Dashboard</a>
+      <a href="/admin.html" class="btn btn-ghost btn-sm">Users</a>
+      <a href="/admin-rewards.html" class="btn btn-ghost btn-sm">Rewards</a>
+      <span class="topbar__user" style="font-size:13px;">
+        <strong id="topbar-name">...</strong>
+        <span class="badge badge-admin" style="margin-left:6px;">Admin</span>
+      </span>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+    </div>
+  </nav>
+
+  <div id="skeleton" class="container" style="padding-top:32px;">
+    <div class="skel-block" style="height:80px;margin-bottom:16px;"></div>
+    <div class="skel-block" style="height:260px;"></div>
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="container" style="padding-top:32px;max-width:960px;">
+      <div class="section-header" style="margin-bottom:22px;">
+        <div>
+          <div class="section-title">Grading System Settings</div>
+          <div class="section-sub">Set grade points, hint costs, and FD/RD interest rates. New evaluations and point-finance actions use these values.</div>
+        </div>
+      </div>
+
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card admin-stat-card--red">
+          <div class="admin-stat-card__value admin-stat-card__value--red" id="stat-wrong">0</div>
+          <div class="admin-stat-card__label">Wrong</div>
+        </div>
+        <div class="admin-stat-card admin-stat-card--amber">
+          <div class="admin-stat-card__value admin-stat-card__value--amber" id="stat-partial">5</div>
+          <div class="admin-stat-card__label">Partially Correct</div>
+        </div>
+        <div class="admin-stat-card admin-stat-card--blue">
+          <div class="admin-stat-card__value admin-stat-card__value--blue" id="stat-almost">15</div>
+          <div class="admin-stat-card__label">Almost Correct</div>
+        </div>
+        <div class="admin-stat-card admin-stat-card--green">
+          <div class="admin-stat-card__value admin-stat-card__value--green" id="stat-correct">20</div>
+          <div class="admin-stat-card__label">Correct</div>
+        </div>
+      </div>
+
+      <div class="admin-grading-layout">
+        <div class="admin-grading-card">
+          <div class="section-title" style="font-size:16px;margin-bottom:12px;">Grading Points</div>
+          <div id="grading-alert" class="alert"></div>
+
+          <div class="grade-setting-grid">
+            <div class="form-group">
+              <label class="form-label" for="grade-wrong">Wrong</label>
+              <input id="grade-wrong" type="number" class="form-input grade-setting-input" value="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="grade-partial">Partially Correct</label>
+              <input id="grade-partial" type="number" class="form-input grade-setting-input" value="5" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="grade-almost">Almost Correct</label>
+              <input id="grade-almost" type="number" class="form-input grade-setting-input" value="15" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="grade-correct">Correct</label>
+              <input id="grade-correct" type="number" class="form-input grade-setting-input" value="20" />
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border-light);margin:18px 0;" />
+
+          <div class="section-title" style="font-size:16px;margin-bottom:10px;">AI Hint Costs</div>
+          <div class="section-sub" style="margin-bottom:12px;">
+            Hint 1 is always free. Hint 2, 3, and 4 deduct points from the user balance when unlocked (balance can go negative).
+          </div>
+
+          <div class="grade-setting-grid">
+            <div class="form-group">
+              <label class="form-label" for="hint-cost-1">Hint 1 Cost (fixed)</label>
+              <input id="hint-cost-1" type="number" class="form-input grade-setting-input" value="0" disabled />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="hint-cost-2">Hint 2 Cost</label>
+              <input id="hint-cost-2" type="number" min="0" class="form-input grade-setting-input" value="5" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="hint-cost-3">Hint 3 Cost</label>
+              <input id="hint-cost-3" type="number" min="0" class="form-input grade-setting-input" value="10" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="hint-cost-4">Hint 4 Cost</label>
+              <input id="hint-cost-4" type="number" min="0" class="form-input grade-setting-input" value="15" />
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border-light);margin:18px 0;" />
+
+          <div class="section-title" style="font-size:16px;margin-bottom:10px;">Points Finance & Banking Rates</div>
+          <div class="section-sub" style="margin-bottom:12px;">
+            Users can invest points in FD/RD and use credit card features. Configure rates and default credit limit used by the banking engine.
+          </div>
+
+          <div class="grade-setting-grid">
+            <div class="form-group">
+              <label class="form-label" for="finance-rate-fd">FD Annual Interest (%)</label>
+              <input id="finance-rate-fd" type="number" min="0" step="0.1" class="form-input grade-setting-input" value="8" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="finance-rate-rd">RD Annual Interest (%)</label>
+              <input id="finance-rate-rd" type="number" min="0" step="0.1" class="form-input grade-setting-input" value="10" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="banking-credit-rate">Credit Card Annual Interest (%)</label>
+              <input id="banking-credit-rate" type="number" min="0" step="0.1" class="form-input grade-setting-input" value="24" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="banking-credit-limit">Default Credit Limit (pts)</label>
+              <input id="banking-credit-limit" type="number" min="0" step="1" class="form-input grade-setting-input" value="500" />
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button id="save-grading-btn" class="btn btn-primary">Save Settings</button>
+            <button id="reload-grading-btn" class="btn btn-outline">Reload</button>
+          </div>
+        </div>
+
+        <div class="admin-grading-card">
+          <div class="section-title" style="font-size:16px;margin-bottom:12px;">Grading Preview</div>
+          <div id="grading-preview" class="grading-preview"></div>
+          <div class="section-title" style="font-size:16px;margin:14px 0 10px;">Hint Cost Preview</div>
+          <div id="hint-cost-preview" class="grading-preview"></div>
+          <div class="section-title" style="font-size:16px;margin:14px 0 10px;">Finance Rate Preview</div>
+          <div id="finance-rate-preview" class="grading-preview"></div>
+          <div class="section-sub" style="margin-top:12px;">
+            Grading points apply in the submissions modal. Hint costs apply when users unlock Hint 2 to Hint 4.
+            FD/RD rates apply to point-finance maturity payouts. Credit APR and default credit limit apply when users use the banking page.
+            Existing graded records keep their previous points.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/admin-grading.js"></script>
+</body>
+</html>

@@ -21,7 +21,7 @@ Cloudflare Workers app for running coding challenges with:
 
 - `src/` — Worker code (router, handlers, utilities, jobs)
 - `public/` — Frontend pages and assets
-- `migrations/` — Incremental SQL migrations (`001` to `013`)
+- `migrations/` — Incremental SQL migrations (`001` to `017`)
 - `db.sql` — Consolidated full schema (single-file canonical schema)
 - `schema.sql` — Legacy initial schema bootstrap
 - `wrangler.toml` — Worker bindings/config
@@ -140,6 +140,8 @@ Notes:
 - Manual admin trigger and cron-based auto trigger
 - Claude/OpenAI model support
 - Prompt controls: topic, difficulty, key points, notes
+- Sequential AI hints with configurable point costs (Hint 1 free)
+- Points Finance (FD/RD): invest points with admin-controlled interest rates
 
 ### Comments & Moderation
 - Threaded comments (reply/edit/delete)
