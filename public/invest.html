@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invest & Cards - Challenge Accepted</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/base.css" />
+  <link rel="stylesheet" href="/assets/css/components.css" />
+  <link rel="stylesheet" href="/assets/css/invest.css" />
+</head>
+<body class="invest-body">
+  <nav class="topbar">
+    <a href="/dashboard.html" class="topbar__logo">Challenge Accepted</a>
+    <div class="topbar__right">
+      <a href="/dashboard.html" class="btn btn-ghost btn-sm">Dashboard</a>
+      <span class="topbar__user hidden-xs">
+        <strong id="topbar-name">...</strong>
+      </span>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+    </div>
+  </nav>
+
+  <main class="invest-main">
+    <section class="invest-hero">
+      <div class="invest-hero__head">
+        <div class="invest-hero__eyebrow">Banking</div>
+        <h1 class="invest-hero__title">Invest, spend, and manage credit with points.</h1>
+        <p class="invest-hero__sub">
+          Open FD/RD plans, control payout preferences, and manage debit and credit balances in one place.
+        </p>
+      </div>
+      <div class="invest-hero__stats">
+        <article class="balance-card balance-card--debit">
+          <div class="balance-card__label">Debit Balance</div>
+          <div class="balance-card__value" id="summary-debit">0</div>
+          <div class="balance-card__meta">Spendable points</div>
+        </article>
+        <article class="balance-card balance-card--credit">
+          <div class="balance-card__label">Credit Used</div>
+          <div class="balance-card__value" id="summary-credit">0</div>
+          <div class="balance-card__meta">Outstanding balance</div>
+        </article>
+        <article class="balance-card balance-card--available">
+          <div class="balance-card__label">Credit Available</div>
+          <div class="balance-card__value" id="summary-credit-available">0</div>
+          <div class="balance-card__meta">Remaining limit</div>
+        </article>
+      </div>
+    </section>
+
+    <div id="invest-alert" class="alert"></div>
+
+    <section class="invest-panel">
+      <div class="invest-panel__head">
+        <h2>Cards</h2>
+        <div id="cards-meta" class="invest-panel__meta"></div>
+      </div>
+      <div class="cards-grid">
+        <article class="bank-card bank-card--debit">
+          <div class="bank-card__top">
+            <div class="bank-card__title">Debit Card</div>
+            <div class="bank-card__last4" id="debit-last4">••••</div>
+          </div>
+          <div class="bank-card__row"><span>Status</span><strong id="debit-status">Active</strong></div>
+          <div class="bank-card__row"><span>Debit balance</span><strong id="debit-balance-inline">0 pts</strong></div>
+          <form id="debit-spend-form" class="inline-form">
+            <div class="inline-form__grid">
+              <input id="debit-amount" type="number" min="1" class="form-input" placeholder="Spend amount" required />
+              <input id="debit-note" type="text" maxlength="120" class="form-input" placeholder="Note (optional)" />
+            </div>
+            <button id="debit-spend-btn" class="btn btn-outline btn-sm" type="submit">Debit Spend</button>
+          </form>
+        </article>
+
+        <article class="bank-card bank-card--credit">
+          <div class="bank-card__top">
+            <div class="bank-card__title">Credit Card</div>
+            <div class="bank-card__last4" id="credit-last4">Not issued</div>
+          </div>
+          <div id="credit-card-placeholder" class="credit-placeholder">
+            <p>Apply once to activate your credit card.</p>
+            <button id="credit-apply-btn" class="btn btn-primary btn-sm" type="button">Apply for Credit Card</button>
+          </div>
+          <div id="credit-card-live" style="display:none;">
+            <div class="bank-card__row"><span>Status</span><strong id="credit-status">Active</strong></div>
+            <div class="bank-card__row"><span>Credit limit</span><strong id="credit-limit">0 pts</strong></div>
+            <div class="bank-card__row"><span>Outstanding</span><strong id="credit-outstanding">0 pts</strong></div>
+            <div class="bank-card__row"><span>Annual interest</span><strong id="credit-apr">0%</strong></div>
+
+            <form id="credit-spend-form" class="inline-form">
+              <div class="inline-form__grid">
+                <input id="credit-spend-amount" type="number" min="1" class="form-input" placeholder="Spend amount" required />
+                <input id="credit-spend-note" type="text" maxlength="120" class="form-input" placeholder="Note (optional)" />
+              </div>
+              <button id="credit-spend-btn" class="btn btn-outline btn-sm" type="submit">Spend via Credit</button>
+            </form>
+
+            <form id="credit-pay-form" class="inline-form">
+              <div class="inline-form__grid inline-form__grid--single">
+                <input id="credit-pay-amount" type="number" min="1" class="form-input" placeholder="Pay bill amount" required />
+              </div>
+              <button id="credit-pay-btn" class="btn btn-primary btn-sm" type="submit">Pay Credit Bill</button>
+            </form>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="invest-open-grid">
+      <article class="invest-panel">
+        <div class="invest-panel__head">
+          <h2>Open FD</h2>
+          <div class="invest-panel__meta" id="fd-rate-chip">Rate: --%</div>
+        </div>
+        <form id="fd-form">
+          <div class="form-group">
+            <label class="form-label" for="fd-principal">Principal points</label>
+            <input id="fd-principal" type="number" min="1" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fd-tenure">Tenure (days)</label>
+            <input id="fd-tenure" type="number" min="1" max="3650" class="form-input" value="90" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fd-payout-mode">Payout mode</label>
+            <select id="fd-payout-mode" class="form-input" required>
+              <option value="monthly">Monthly payout</option>
+              <option value="quarterly">Quarterly payout</option>
+              <option value="yearly">Yearly payout</option>
+              <option value="closure" selected>Payout at closure</option>
+              <option value="reinvest">Reinvest payout</option>
+            </select>
+          </div>
+          <button id="fd-open-btn" class="btn btn-primary" type="submit">Open FD</button>
+        </form>
+      </article>
+
+      <article class="invest-panel">
+        <div class="invest-panel__head">
+          <h2>Open RD</h2>
+          <div class="invest-panel__meta" id="rd-rate-chip">Rate: --%</div>
+        </div>
+        <form id="rd-form">
+          <div class="form-group">
+            <label class="form-label" for="rd-amount">Recurring amount (per cycle)</label>
+            <input id="rd-amount" type="number" min="1" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="rd-frequency">Recurring frequency</label>
+            <select id="rd-frequency" class="form-input" required>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly" selected>Monthly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="rd-installments">Installments</label>
+            <input id="rd-installments" type="number" min="1" max="240" class="form-input" value="6" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="rd-payout-mode">Payout mode</label>
+            <select id="rd-payout-mode" class="form-input" required>
+              <option value="monthly" selected>Monthly payout</option>
+              <option value="quarterly">Quarterly payout</option>
+              <option value="yearly">Yearly payout</option>
+              <option value="closure">Payout at closure</option>
+              <option value="reinvest">Reinvest payout</option>
+            </select>
+          </div>
+          <div class="invest-hint" id="rd-tenure-preview">Maturity duration: ~180 days</div>
+          <button id="rd-open-btn" class="btn btn-primary" type="submit">Open RD</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="invest-panel">
+      <div class="invest-panel__head">
+        <h2>Your Investments</h2>
+        <div class="invest-panel__meta" id="invest-count">0 plans</div>
+      </div>
+      <div id="investments-list" class="investment-list">
+        <div class="empty-state">No investments yet.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/invest.js"></script>
+</body>
+</html>

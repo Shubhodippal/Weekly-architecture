@@ -86,6 +86,19 @@ const api = {
     });
   },
 
+  /** GET /api/admin/grading/settings */
+  adminGetGradingSettings() {
+    return apiFetch("/api/admin/grading/settings");
+  },
+
+  /** PATCH /api/admin/grading/settings */
+  adminUpdateGradingSettings(points) {
+    return apiFetch("/api/admin/grading/settings", {
+      method: "PATCH",
+      body: JSON.stringify(points),
+    });
+  },
+
   /** POST /api/admin/challenges/auto-post */
   triggerAutoChallenge(payload = {}) {
     return apiFetch("/api/admin/challenges/auto-post", {
@@ -280,6 +293,79 @@ const api = {
   },
 
   // ── AI assistance ───────────────────────────────────────────────────────
+
+  /** GET /api/points/finance */
+  getPointsFinanceOverview() {
+    return apiFetch("/api/points/finance");
+  },
+
+  /** POST /api/points/finance/open */
+  openPointsFinance(payload) {
+    return apiFetch("/api/points/finance/open", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** POST /api/points/finance/:id/close */
+  closePointsFinance(id) {
+    return apiFetch(`/api/points/finance/${id}/close`, { method: "POST" });
+  },
+
+  /** GET /api/banking/overview */
+  getBankingOverview() {
+    return apiFetch("/api/banking/overview");
+  },
+
+  /** POST /api/banking/credit-card/apply */
+  applyCreditCard() {
+    return apiFetch("/api/banking/credit-card/apply", { method: "POST" });
+  },
+
+  /** POST /api/banking/debit/spend */
+  bankingDebitSpend(amount, note = "") {
+    return apiFetch("/api/banking/debit/spend", {
+      method: "POST",
+      body: JSON.stringify({ amount, note }),
+    });
+  },
+
+  /** POST /api/banking/credit/spend */
+  bankingCreditSpend(amount, note = "") {
+    return apiFetch("/api/banking/credit/spend", {
+      method: "POST",
+      body: JSON.stringify({ amount, note }),
+    });
+  },
+
+  /** POST /api/banking/credit/pay */
+  bankingCreditPay(amount) {
+    return apiFetch("/api/banking/credit/pay", {
+      method: "POST",
+      body: JSON.stringify({ amount }),
+    });
+  },
+
+  /** POST /api/banking/investments/fd */
+  openFdInvestment(payload) {
+    return apiFetch("/api/banking/investments/fd", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** POST /api/banking/investments/rd */
+  openRdInvestment(payload) {
+    return apiFetch("/api/banking/investments/rd", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** POST /api/banking/investments/:id/close */
+  closeBankingInvestment(id) {
+    return apiFetch(`/api/banking/investments/${id}/close`, { method: "POST" });
+  },
 
   /** POST /api/ai/hints */
   getHints(challengeId, revealLevel = null) {

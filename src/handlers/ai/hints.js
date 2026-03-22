@@ -1,6 +1,7 @@
 import { requireAuth } from "../../middleware/auth.js";
 import { json } from "../../utils/response.js";
 import { generateHintForLevel } from "../../services/aiAssist.js";
+import { getHintCosts } from "../../utils/hintCosts.js";
 
 /**
  * POST /api/ai/hints
@@ -40,6 +41,7 @@ export async function handleHints(request, env) {
 
   try {
     const userId = session.userId;
+    const hintCosts = await getHintCosts(env, { ensure: true });
 
     let row = await env.DB.prepare(
       `SELECT hint_1, hint_2, hint_3, hint_4, unlocked_level
@@ -76,6 +78,8 @@ export async function handleHints(request, env) {
         }, 400);
       }
 
+      const costForLevel = Number(hintCosts[revealLevel] || 0);
+
       const existingHints = [
         String(row.hint_1 || ""),
         String(row.hint_2 || ""),
@@ -98,11 +102,22 @@ export async function handleHints(request, env) {
         }
       }
 
-      await env.DB.prepare(
+      const updateHintStmt = env.DB.prepare(
         `UPDATE user_challenge_hints
          SET ${hintColumn} = ?, unlocked_level = ?, updated_at = datetime('now')
          WHERE user_id = ? AND challenge_id = ?`
-      ).bind(hintText, revealLevel, userId, challengeId).run();
+      ).bind(hintText, revealLevel, userId, challengeId);
+
+      if (costForLevel > 0) {
+        const reason = `AI Hint ${revealLevel} unlock (challenge #${challengeId})`;
+        const deductStmt = env.DB.prepare(
+          `INSERT INTO bonus_points (user_id, points, reason, granted_by)
+           VALUES (?, ?, ?, ?)`
+        ).bind(userId, -costForLevel, reason, userId);
+        await env.DB.batch([updateHintStmt, deductStmt]);
+      } else {
+        await updateHintStmt.run();
+      }
 
       unlockedLevel = revealLevel;
 
@@ -120,7 +135,16 @@ export async function handleHints(request, env) {
       { level: 4, text: String(row.hint_4 || "") },
     ];
 
-    return json({ success: true, hints, unlockedLevel });
+    const balance = await getUserNetBalance(env, userId);
+    const latestUnlockCost = hasRevealLevel ? Number(hintCosts[revealLevel] || 0) : 0;
+    return json({
+      success: true,
+      hints,
+      unlockedLevel,
+      hint_costs: hintCosts,
+      balance,
+      cost_applied: latestUnlockCost,
+    });
   } catch (e) {
     console.error("[ai/hints]", e);
     const message = (e && e.message) ? e.message : "AI hints failed with an unknown error";
@@ -134,4 +158,15 @@ export async function handleHints(request, env) {
       },
     }, 500);
   }
+}
+
+async function getUserNetBalance(env, userId) {
+  const row = await env.DB.prepare(`
+    SELECT
+      COALESCE((SELECT SUM(points) FROM submissions WHERE user_id = ?), 0)
+      + COALESCE((SELECT SUM(points) FROM bonus_points WHERE user_id = ?), 0)
+      - COALESCE((SELECT SUM(points_consumed) FROM user_rewards WHERE user_id = ?), 0)
+      AS balance
+  `).bind(userId, userId, userId).first();
+  return Number(row?.balance || 0);
 }

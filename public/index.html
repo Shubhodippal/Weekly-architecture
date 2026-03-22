@@ -3,18 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Challenge Accepted – Challenge &amp; Assessment Platform</title>
+  <title>Challenge Accepted - Challenge and Assessment Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/base.css" />
+  <link rel="stylesheet" href="/assets/css/components.css" />
+  <link rel="stylesheet" href="/assets/css/landing.css" />
 </head>
 <body class="landing-body">
   <header class="landing-header">
     <div class="landing-header__left">
-      <span class="landing-logo-icon">🎯</span>
+      <span class="landing-logo-icon">CA</span>
       <div class="landing-logo-text">
-        <span class="landing-logo-title">Challenge Accepted <span class="landing-logo-by">by Examspcae</span></span>
-        <span class="landing-logo-sub">Challenges, grading, points, and rewards</span>
+        <span class="landing-logo-title">Challenge Accepted <span class="landing-logo-by">by Examspace</span></span>
+        <span class="landing-logo-sub">Challenge publishing, grading, points, and rewards</span>
       </div>
     </div>
     <div class="landing-header__right">
@@ -24,13 +26,13 @@
   </header>
 
   <main class="landing-main">
-    <section class="landing-hero landing-hero--minimal">
+    <section class="landing-hero">
       <div class="landing-hero__copy">
-        <div class="landing-pill">For institutes &amp; teams</div>
-        <h1 class="landing-hero__title">A clean platform for challenges and assessments.</h1>
+        <div class="landing-pill">Assessment platform for teams</div>
+        <h1 class="landing-hero__title">Run challenge programs with product-grade clarity.</h1>
         <p class="landing-hero__subtitle">
-          Admins publish challenges when needed. Participants submit responses, get graded, and earn points and rewards
-          — with authentication, file storage, and moderation handled securely.
+          Manage the full lifecycle in one place: publishing, submissions, grading, moderation, points, rewards,
+          and leaderboard visibility. Built for institutes and teams that need scale without workflow chaos.
         </p>
 
         <div class="landing-cta-row">
@@ -38,32 +40,94 @@
           <button id="landing-cta-dashboard" class="btn btn-outline landing-cta-secondary">Dashboard</button>
         </div>
 
-        <div class="landing-mini-grid" aria-label="Key capabilities">
-          <div class="landing-mini-item">
-            <div class="landing-mini-title">OTP sign-in</div>
-            <div class="landing-mini-sub">Passwordless, session-based auth.</div>
+        <div class="landing-proof-grid" aria-label="Proof points">
+          <div class="landing-proof-item">
+            <div class="landing-proof-label">Auth</div>
+            <div class="landing-proof-value">OTP plus session control</div>
           </div>
-          <div class="landing-mini-item">
-            <div class="landing-mini-title">Submissions &amp; grading</div>
-            <div class="landing-mini-sub">Text + file uploads with feedback.</div>
+          <div class="landing-proof-item">
+            <div class="landing-proof-label">Submission</div>
+            <div class="landing-proof-value">Text and file uploads</div>
           </div>
-          <div class="landing-mini-item">
-            <div class="landing-mini-title">Points &amp; rewards</div>
-            <div class="landing-mini-sub">Leaderboards, tiers, and claims.</div>
+          <div class="landing-proof-item">
+            <div class="landing-proof-label">Evaluation</div>
+            <div class="landing-proof-value">Grading and feedback</div>
           </div>
-          <div class="landing-mini-item">
-            <div class="landing-mini-title">Moderation tools</div>
-            <div class="landing-mini-sub">Reports, hide/unhide, pinning.</div>
+          <div class="landing-proof-item">
+            <div class="landing-proof-label">Growth</div>
+            <div class="landing-proof-value">Points, tiers, rewards</div>
           </div>
         </div>
-
-        <div class="landing-footnote">Powered by Cloudflare Workers, D1, KV &amp; R2.</div>
       </div>
+
+      <aside class="landing-hero__panel" aria-label="Platform preview">
+        <div class="product-shell">
+          <div class="product-shell__bar">
+            <div class="product-shell__dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span class="product-shell__env">Live workspace</span>
+          </div>
+
+          <div class="product-shell__kpis">
+            <div class="product-kpi">
+              <div class="product-kpi__label">Active challenges</div>
+              <div class="product-kpi__value">24</div>
+            </div>
+            <div class="product-kpi">
+              <div class="product-kpi__label">Submissions this week</div>
+              <div class="product-kpi__value">1,842</div>
+            </div>
+            <div class="product-kpi">
+              <div class="product-kpi__label">Avg grading SLA</div>
+              <div class="product-kpi__value">2h 18m</div>
+            </div>
+          </div>
+
+          <div class="product-shell__stream">
+            <div class="stream-item">
+              <div class="stream-item__title">Rate limiter challenge published</div>
+              <div class="stream-item__meta">Systems track - 320 pts</div>
+            </div>
+            <div class="stream-item">
+              <div class="stream-item__title">58 submissions auto-queued for grading</div>
+              <div class="stream-item__meta">Evaluation worker - running</div>
+            </div>
+            <div class="stream-item">
+              <div class="stream-item__title">Reward tier unlocked for 12 users</div>
+              <div class="stream-item__meta">Points service - completed</div>
+            </div>
+          </div>
+        </div>
+      </aside>
     </section>
+
+    <section class="landing-feature-band" aria-label="Core capabilities">
+      <article class="feature-card">
+        <h3 class="feature-card__title">Challenge Operations</h3>
+        <p class="feature-card__text">Publish, schedule, and manage challenge windows with clear ownership and lifecycle controls.</p>
+      </article>
+      <article class="feature-card">
+        <h3 class="feature-card__title">Submission Workflow</h3>
+        <p class="feature-card__text">Collect text and file responses, track attempts, and keep review history organized.</p>
+      </article>
+      <article class="feature-card">
+        <h3 class="feature-card__title">Scoring and Rewards</h3>
+        <p class="feature-card__text">Award points, unlock tiers, and maintain transparent leaderboard momentum for participants.</p>
+      </article>
+      <article class="feature-card">
+        <h3 class="feature-card__title">Moderation and Safety</h3>
+        <p class="feature-card__text">Handle reports, visibility, and content controls with admin tools designed for consistency.</p>
+      </article>
+    </section>
+
+    <div class="landing-footnote">
+      Built on Cloudflare Workers, D1, KV, and R2 for reliable performance.
+    </div>
   </main>
 
   <footer class="landing-footer">
-    <span>Challenge Accepted &middot; Deployed on Cloudflare Workers</span>
+    <span>Challenge Accepted - Production-ready challenge and assessment platform</span>
   </footer>
 
   <script src="/assets/js/api.js"></script>
@@ -73,22 +137,23 @@
       try {
         const res = await api.me();
         if (res && res.success) {
-          window.location.href = '/dashboard.html';
+          window.location.href = "/dashboard.html";
         } else {
-          window.location.href = '/login.html';
+          window.location.href = "/login.html";
         }
       } catch (e) {
-        window.location.href = '/login.html';
+        window.location.href = "/login.html";
       }
     }
 
-    const dashBtn = document.getElementById('landing-dashboard-btn');
+    const dashBtn = document.getElementById("landing-dashboard-btn");
     if (dashBtn) {
-      dashBtn.addEventListener('click', goToDashboardOrLogin);
+      dashBtn.addEventListener("click", goToDashboardOrLogin);
     }
-    const dashCta = document.getElementById('landing-cta-dashboard');
+
+    const dashCta = document.getElementById("landing-cta-dashboard");
     if (dashCta) {
-      dashCta.addEventListener('click', goToDashboardOrLogin);
+      dashCta.addEventListener("click", goToDashboardOrLogin);
     }
   </script>
 </body>

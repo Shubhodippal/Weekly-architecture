@@ -89,7 +89,7 @@ $("otp-form").addEventListener("submit", async (e) => {
 $("resend-btn").addEventListener("click", async () => {
   hideAlert("otp-alert");
   $("resend-btn").disabled = true;
-  $("resend-btn").textContent = "Sending…";
+  $("resend-btn").textContent = "Sending...";
   const res = await api.requestOtp(currentEmail, "");
   $("resend-btn").textContent = "Resend OTP";
   $("resend-btn").disabled = false;

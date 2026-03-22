@@ -1,5 +1,5 @@
 -- Consolidated database schema
--- Source: migrations/001..013
+-- Source: migrations/001..018
 
 PRAGMA foreign_keys = ON;
 
@@ -69,6 +69,101 @@ CREATE TABLE IF NOT EXISTS submissions (
   evaluated_at  TEXT,
   UNIQUE(challenge_id, user_id)
 );
+
+CREATE TABLE IF NOT EXISTS grading_settings (
+  grade      TEXT PRIMARY KEY CHECK(grade IN ('wrong', 'partial', 'almost', 'correct')),
+  points     INTEGER NOT NULL,
+  updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_by INTEGER REFERENCES users(id)
+);
+
+INSERT OR IGNORE INTO grading_settings (grade, points) VALUES
+  ('wrong', 0),
+  ('partial', 5),
+  ('almost', 15),
+  ('correct', 20);
+
+CREATE TABLE IF NOT EXISTS hint_cost_settings (
+  level      INTEGER PRIMARY KEY CHECK(level BETWEEN 1 AND 4),
+  cost       INTEGER NOT NULL CHECK(cost >= 0),
+  updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_by INTEGER REFERENCES users(id)
+);
+
+INSERT OR IGNORE INTO hint_cost_settings (level, cost) VALUES
+  (1, 0),
+  (2, 5),
+  (3, 10),
+  (4, 15);
+
+CREATE TABLE IF NOT EXISTS finance_settings (
+  plan_type   TEXT PRIMARY KEY CHECK(plan_type IN ('fd', 'rd')),
+  annual_rate REAL NOT NULL CHECK(annual_rate >= 0),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_by  INTEGER REFERENCES users(id)
+);
+
+INSERT OR IGNORE INTO finance_settings (plan_type, annual_rate) VALUES
+  ('fd', 8),
+  ('rd', 10);
+
+CREATE TABLE IF NOT EXISTS point_investments (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_type        TEXT    NOT NULL CHECK(plan_type IN ('fd', 'rd')),
+  principal_points INTEGER NOT NULL CHECK(principal_points > 0),
+  annual_rate      REAL    NOT NULL CHECK(annual_rate >= 0),
+  tenure_days      INTEGER NOT NULL CHECK(tenure_days > 0),
+  opened_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+  maturity_at      TEXT    NOT NULL,
+  status           TEXT    NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'closed')),
+  closed_at        TEXT,
+  interest_points  INTEGER NOT NULL DEFAULT 0,
+  payout_points    INTEGER NOT NULL DEFAULT 0,
+  recurring_amount INTEGER NOT NULL DEFAULT 0,
+  recurring_frequency TEXT,
+  recurring_every_days INTEGER NOT NULL DEFAULT 0,
+  installments_total INTEGER NOT NULL DEFAULT 1,
+  installments_paid INTEGER NOT NULL DEFAULT 1,
+  next_installment_at TEXT,
+  payout_mode TEXT NOT NULL DEFAULT 'closure',
+  payout_every_days INTEGER NOT NULL DEFAULT 0,
+  next_payout_at TEXT,
+  last_interest_calc_at TEXT,
+  accrued_interest_points INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_point_investments_user_status
+  ON point_investments (user_id, status, maturity_at);
+
+CREATE TABLE IF NOT EXISTS banking_meta_settings (
+  id                    INTEGER PRIMARY KEY CHECK(id = 1),
+  credit_annual_rate    REAL    NOT NULL CHECK(credit_annual_rate >= 0),
+  default_credit_limit  INTEGER NOT NULL CHECK(default_credit_limit >= 0),
+  updated_at            TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_by            INTEGER REFERENCES users(id)
+);
+
+INSERT OR IGNORE INTO banking_meta_settings (id, credit_annual_rate, default_credit_limit) VALUES
+  (1, 24, 500);
+
+CREATE TABLE IF NOT EXISTS bank_cards (
+  id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id                  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  card_type                TEXT    NOT NULL CHECK(card_type IN ('debit', 'credit')),
+  status                   TEXT    NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'pending', 'rejected')),
+  card_last4               TEXT    NOT NULL,
+  credit_limit             INTEGER NOT NULL DEFAULT 0,
+  outstanding_balance      INTEGER NOT NULL DEFAULT 0,
+  annual_interest_rate     REAL    NOT NULL DEFAULT 0,
+  interest_last_applied_at TEXT,
+  created_at               TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at               TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, card_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_cards_user_type
+  ON bank_cards (user_id, card_type);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Rewards & Points

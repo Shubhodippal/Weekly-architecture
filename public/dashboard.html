@@ -6,7 +6,9 @@
   <title>Challenge Accepted</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="stylesheet" href="/assets/css/base.css" />
+  <link rel="stylesheet" href="/assets/css/components.css" />
+  <link rel="stylesheet" href="/assets/css/dashboard.css" />
 </head>
 <body class="home-body">
 
@@ -33,6 +35,12 @@
       </a>
       <a href="/admin-rewards.html" id="btn-rewards" class="btn btn-outline btn-sm" style="display:none;">
         🎁 Rewards
+      </a>
+      <a href="/admin-grading.html" id="btn-grading" class="btn btn-outline btn-sm" style="display:none;">
+        🧮 Grading
+      </a>
+      <a href="/invest.html" id="btn-invest" class="btn btn-outline btn-sm" style="display:none;">
+        🏦 Invest
       </a>
       <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
     </div>
@@ -70,6 +78,39 @@
           <div class="ps-points__label">🎯 total points</div>
         </div>
 
+        <div id="finance-sidebar-wrapper" class="finance-sidebar" style="display:none;">
+          <div class="finance-sidebar__head">📈 Points Finance</div>
+          <div class="finance-sidebar__rates" id="finance-rates">FD --% • RD --%</div>
+          <div id="finance-alert" class="alert"></div>
+
+          <div class="finance-sidebar__form">
+            <div class="form-group" style="margin-bottom:10px;">
+              <label class="form-label" for="finance-plan" style="font-size:12px;">Plan</label>
+              <select id="finance-plan" class="form-input" style="font-size:13px;padding:8px 10px;">
+                <option value="fd">FD</option>
+                <option value="rd">RD</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+              <label class="form-label" for="finance-principal" style="font-size:12px;">Points to invest</label>
+              <input id="finance-principal" type="number" min="1" class="form-input" style="font-size:13px;padding:8px 10px;" placeholder="e.g. 100" />
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+              <label class="form-label" for="finance-tenure" style="font-size:12px;">Tenure (days)</label>
+              <input id="finance-tenure" type="number" min="1" class="form-input" style="font-size:13px;padding:8px 10px;" value="30" />
+            </div>
+            <button id="finance-open-btn" class="btn btn-primary btn-sm" style="width:100%;">Open FD/RD</button>
+          </div>
+
+          <div id="finance-investments-list" class="finance-sidebar__list">
+            <div class="comments-loading">Loading finance plans...</div>
+          </div>
+        </div>
+
+        <a href="/invest.html" id="sidebar-invest-link" class="sidebar-link" style="display:none;margin-top:10px;text-align:center;">
+          🏦 Open Full Banking
+        </a>
+
         <!-- My Rewards ladder (non-admin, hidden until loaded) -->
         <div id="rewards-sidebar-wrapper" style="display:none;margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px;">
           <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">🎁 My Rewards</div>
@@ -93,6 +134,9 @@
         </a>
         <a href="/admin-rewards.html" class="sidebar-link">
           🎁 Reward System
+        </a>
+        <a href="/admin-grading.html" class="sidebar-link">
+          🧮 Grading System
         </a>
       </div>
     </aside>
@@ -418,16 +462,17 @@
       </div>
       <div class="modal-body">
         <div class="ai-hints">
-          <div class="ai-hints-note">Hints are challenge-specific. Unlock them in order: 1 → 2 → 3 → 4.</div>
+          <div id="ai-hints-note" class="ai-hints-note">Hints are challenge-specific. Hint 1 is free. Unlock in order: 1 -> 2 -> 3 -> 4. Hint costs can make balance negative.</div>
+          <div id="ai-hints-balance" class="ai-hints-balance">Available points: --</div>
           <div id="ai-hints-loading" class="ai-hints-loading" style="display:none;">
             <span class="spinner"></span>
             <span id="ai-hints-loading-text">Generating hints…</span>
           </div>
           <div class="ai-hints-actions">
-            <button id="ai-hint-1" type="button" class="btn btn-outline btn-sm">🔓 Reveal Hint 1</button>
-            <button id="ai-hint-2" type="button" class="btn btn-outline btn-sm" disabled>🔒 Reveal Hint 2</button>
-            <button id="ai-hint-3" type="button" class="btn btn-outline btn-sm" disabled>🔒 Reveal Hint 3</button>
-            <button id="ai-hint-4" type="button" class="btn btn-outline btn-sm" disabled>🔒 Reveal Hint 4</button>
+            <button id="ai-hint-1" type="button" class="btn btn-outline btn-sm">Unlock Hint 1 (Free)</button>
+            <button id="ai-hint-2" type="button" class="btn btn-outline btn-sm" disabled>Unlock Hint 2</button>
+            <button id="ai-hint-3" type="button" class="btn btn-outline btn-sm" disabled>Unlock Hint 3</button>
+            <button id="ai-hint-4" type="button" class="btn btn-outline btn-sm" disabled>Unlock Hint 4</button>
           </div>
 
           <div class="ai-hints-list">
