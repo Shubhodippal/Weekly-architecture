@@ -26,7 +26,6 @@ export async function handleListSubmissions(request, env, challengeId) {
      JOIN users u ON u.id = s.user_id
      WHERE s.challenge_id = ?
      ORDER BY
-       CASE WHEN s.grade = 'not_attempted' THEN 1 ELSE 0 END,
        s.submitted_at DESC`
   ).bind(id).all();
 
