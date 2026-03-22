@@ -211,9 +211,9 @@ function renderFeed(list) {
           </div>` : ""}
       </div>` : ""}
 
-      ${!isAdmin && c.my_grade ? (() => {
-        const gradeLabels = { wrong: "Wrong", partial: "Partially Correct", almost: "Almost Correct", correct: "Correct", not_attempted: "Not Attempted" };
-        const gradeClasses = { wrong: "grade-badge--wrong", partial: "grade-badge--partial", almost: "grade-badge--almost", correct: "grade-badge--correct", not_attempted: "grade-badge--not_attempted" };
+      ${!isAdmin && c.my_grade && c.my_grade !== 'not_attempted' ? (() => {
+        const gradeLabels = { wrong: "Wrong", partial: "Partially Correct", almost: "Almost Correct", correct: "Correct" };
+        const gradeClasses = { wrong: "grade-badge--wrong", partial: "grade-badge--partial", almost: "grade-badge--almost", correct: "grade-badge--correct" };
         const pts = c.my_points;
         const ptsColor = pts > 0 ? "#059669" : pts < 0 ? "#dc2626" : "#d97706";
         return `
@@ -1866,7 +1866,6 @@ const GRADE_LABELS = {
   partial:      "Partially Correct",
   almost:       "Almost Correct",
   correct:      "Correct",
-  not_attempted:"Not Attempted",
 };
 
 async function openViewSubmissionsModal(challengeId) {
@@ -1892,8 +1891,9 @@ async function openViewSubmissionsModal(challengeId) {
 
   listEl.innerHTML = res.submissions.map((s) => {
     const isNA = s.grade === "not_attempted";
+    if (isNA) return ""; // Skip not_attempted penalty records
 
-    const badgeHtml = s.grade && !isNA
+    const badgeHtml = s.grade
       ? `<span class="grade-badge grade-badge--${s.grade}">${GRADE_LABELS[s.grade]}</span>
          <span class="pts-badge" style="color:${s.points > 0 ? "#059669" : s.points < 0 ? "#dc2626" : "#d97706"};">
            ${s.points > 0 ? "+" : ""}${s.points} pts
@@ -1912,14 +1912,11 @@ async function openViewSubmissionsModal(challengeId) {
           <span class="vs-item__email">${esc(s.user_email)}</span>
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;">
-          ${isNA
-            ? `<span class="grade-badge grade-badge--not_attempted">Did Not Submit</span>
-               <span class="pts-badge" style="color:#dc2626;">−10 pts</span>`
-            : `${badgeHtml}<span class="vs-item__date">${fmtDate(s.submitted_at)}</span>`}
+          ${badgeHtml}<span class="vs-item__date">${fmtDate(s.submitted_at)}</span>
         </div>
       </div>
 
-      ${isNA ? "" : `
+      ${`
         ${s.solution_text
           ? `<div class="vs-item__text">${esc(s.solution_text)}</div>`
           : `<em style="color:#9ca3af;font-size:13px;">No text solution provided.</em>`}

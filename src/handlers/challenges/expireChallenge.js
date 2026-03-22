@@ -33,27 +33,5 @@ export async function handleExpireChallenge(request, env, challengeId) {
     "UPDATE challenges SET last_date = ? WHERE id = ?"
   ).bind(yesterday, id).run();
 
-  // Auto-insert -10 penalty records for users who never submitted
-  const { results: allUsers } = await env.DB.prepare(
-    "SELECT id FROM users WHERE role = 'user'"
-  ).all();
-
-  const { results: submitters } = await env.DB.prepare(
-    "SELECT user_id FROM submissions WHERE challenge_id = ?"
-  ).bind(id).all();
-
-  const submitterIds = new Set(submitters.map((s) => s.user_id));
-  const now = new Date().toISOString();
-
-  for (const user of allUsers) {
-    if (!submitterIds.has(user.id)) {
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO submissions
-           (challenge_id, user_id, solution_text, grade, points, submitted_at, updated_at)
-         VALUES (?, ?, NULL, 'not_attempted', -10, ?, ?)`
-      ).bind(id, user.id, now, now).run();
-    }
-  }
-
   return json({ success: true, message: "Challenge closed", last_date: yesterday });
 }
