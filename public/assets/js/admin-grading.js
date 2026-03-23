@@ -23,7 +23,8 @@ const DEFAULT_FINANCE_RATES = {
   rd: 10,
 };
 const DEFAULT_BANKING_META = {
-  credit_annual_rate: 24,
+  credit_annual_rate: 12,
+  credit_monthly_rate: 12,
   default_credit_limit: 500,
 };
 
@@ -74,7 +75,7 @@ function setFinanceInputs(rates) {
 }
 
 function setBankingInputs(meta) {
-  byId("banking-credit-rate").value = meta.credit_annual_rate;
+  byId("banking-credit-rate").value = meta.credit_monthly_rate ?? meta.credit_annual_rate;
   byId("banking-credit-limit").value = meta.default_credit_limit;
 }
 
@@ -117,8 +118,8 @@ function renderFinanceRatePreview(rates) {
       <span class="grading-preview__points">${rates.rd}%</span>
     </div>
     <div class="grading-preview__row">
-      <span class="grading-preview__grade">Credit Annual Interest</span>
-      <span class="grading-preview__points">${currentBankingMeta.credit_annual_rate}%</span>
+      <span class="grading-preview__grade">Credit Monthly Compound Interest</span>
+      <span class="grading-preview__points">${currentBankingMeta.credit_monthly_rate ?? currentBankingMeta.credit_annual_rate}%</span>
     </div>
     <div class="grading-preview__row">
       <span class="grading-preview__grade">Default Credit Limit</span>
@@ -168,18 +169,18 @@ function readFinanceInputs() {
 }
 
 function readBankingInputs() {
-  const creditAnnualRate = Number.parseFloat(byId("banking-credit-rate").value);
+  const creditMonthlyRate = Number.parseFloat(byId("banking-credit-rate").value);
   const defaultCreditLimit = Number.parseInt(byId("banking-credit-limit").value, 10);
 
-  if (Number.isNaN(creditAnnualRate) || creditAnnualRate < 0) {
-    throw new Error("Credit annual interest must be a non-negative number");
+  if (Number.isNaN(creditMonthlyRate) || creditMonthlyRate < 0) {
+    throw new Error("Credit monthly interest must be a non-negative number");
   }
   if (!Number.isInteger(defaultCreditLimit) || defaultCreditLimit < 0) {
     throw new Error("Default credit limit must be a non-negative integer");
   }
 
   return {
-    credit_annual_rate: Number(creditAnnualRate.toFixed(2)),
+    credit_monthly_rate: Number(creditMonthlyRate.toFixed(2)),
     default_credit_limit: defaultCreditLimit,
   };
 }

@@ -1,5 +1,5 @@
 -- Consolidated database schema
--- Source: migrations/001..018
+-- Source: migrations/001..022
 
 PRAGMA foreign_keys = ON;
 
@@ -145,18 +145,24 @@ CREATE TABLE IF NOT EXISTS banking_meta_settings (
 );
 
 INSERT OR IGNORE INTO banking_meta_settings (id, credit_annual_rate, default_credit_limit) VALUES
-  (1, 24, 500);
+  (1, 12, 500);
 
 CREATE TABLE IF NOT EXISTS bank_cards (
   id                       INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id                  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  card_type                TEXT    NOT NULL CHECK(card_type IN ('debit', 'credit')),
+  card_type                TEXT    NOT NULL DEFAULT 'credit' CHECK(card_type = 'credit'),
   status                   TEXT    NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'pending', 'rejected')),
   card_last4               TEXT    NOT NULL,
   credit_limit             INTEGER NOT NULL DEFAULT 0,
   outstanding_balance      INTEGER NOT NULL DEFAULT 0,
+  principal_outstanding    INTEGER NOT NULL DEFAULT 0,
+  interest_outstanding     INTEGER NOT NULL DEFAULT 0,
+  reward_claim_blocked     INTEGER NOT NULL DEFAULT 0,
+  reward_claim_blocked_at  TEXT,
   annual_interest_rate     REAL    NOT NULL DEFAULT 0,
   interest_last_applied_at TEXT,
+  last_borrowed_at         TEXT,
+  last_payment_at          TEXT,
   created_at               TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at               TEXT    NOT NULL DEFAULT (datetime('now')),
   UNIQUE(user_id, card_type)

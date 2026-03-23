@@ -1518,145 +1518,6 @@ window.doPassReward        = doPassReward;
 window.closeRewardPopup    = closeRewardPopup;
 window.doClaimPassedReward = doClaimPassedReward;
 
-const DEFAULT_FINANCE_RATES = { fd: 8, rd: 10 };
-let financeRates = { ...DEFAULT_FINANCE_RATES };
-
-function fmtRate(rate) {
-  const n = Number(rate);
-  if (Number.isNaN(n)) return "0";
-  return n.toFixed(2).replace(/\.00$/, "");
-}
-
-function financeAlert(msg, type = "info") {
-  const el = document.getElementById("finance-alert");
-  if (!el) return;
-  if (!msg) {
-    el.textContent = "";
-    el.className = "alert";
-    return;
-  }
-  el.textContent = msg;
-  el.className = `alert alert-${type} show`;
-}
-
-function renderFinanceOverview(data) {
-  if (!data) return;
-
-  financeRates = { ...DEFAULT_FINANCE_RATES, ...(data.finance_rates || {}) };
-  const ratesEl = document.getElementById("finance-rates");
-  if (ratesEl) {
-    ratesEl.textContent = `FD ${fmtRate(financeRates.fd)}% • RD ${fmtRate(financeRates.rd)}%`;
-  }
-
-  if (data.balance !== undefined) {
-    const pointsEl = document.getElementById("points-value");
-    if (pointsEl) pointsEl.textContent = String(data.balance);
-  }
-
-  const listEl = document.getElementById("finance-investments-list");
-  if (!listEl) return;
-  const investments = Array.isArray(data.investments) ? data.investments : [];
-
-  if (!investments.length) {
-    listEl.innerHTML = '<div class="comments-empty">No FD/RD plan yet.</div>';
-    return;
-  }
-
-  listEl.innerHTML = investments.slice(0, 8).map((inv) => {
-    const plan = String(inv.plan_type || "fd").toUpperCase();
-    const isClosed = inv.status === "closed";
-    const isMatured = !!inv.can_close;
-    const statusClass = isClosed
-      ? "finance-item__status--closed"
-      : isMatured
-        ? "finance-item__status--matured"
-        : "finance-item__status--active";
-    const statusLabel = isClosed ? "Closed" : isMatured ? "Matured" : "Active";
-
-    return `
-      <div class="finance-item">
-        <div class="finance-item__top">
-          <span class="finance-item__plan">${plan}</span>
-          <span class="finance-item__status ${statusClass}">${statusLabel}</span>
-        </div>
-        <div class="finance-item__meta">
-          ${inv.principal_points} pts for ${inv.tenure_days}d @ ${fmtRate(inv.annual_rate)}%<br />
-          Maturity: ${fmtDateTime(inv.maturity_at)}<br />
-          Payout: ${inv.payout_points} pts
-        </div>
-        ${isMatured ? `<button class="btn btn-primary btn-sm finance-item__close" onclick="closeFinanceInvestment(${inv.id})">Close & Credit</button>` : ""}
-      </div>
-    `;
-  }).join("");
-}
-
-async function loadFinanceOverview() {
-  const res = await api.getPointsFinanceOverview().catch(() => null);
-  if (!res?.success) {
-    financeAlert(res?.message || "Could not load finance plans.", "error");
-    return;
-  }
-  financeAlert("");
-  renderFinanceOverview(res);
-}
-
-async function openFinanceInvestment() {
-  const planType = String(document.getElementById("finance-plan")?.value || "fd").toLowerCase();
-  const principalPoints = Number.parseInt(document.getElementById("finance-principal")?.value, 10);
-  const tenureDays = Number.parseInt(document.getElementById("finance-tenure")?.value, 10);
-  if (!Number.isInteger(principalPoints) || principalPoints <= 0) {
-    financeAlert("Enter a valid positive point amount.", "error");
-    return;
-  }
-  if (!Number.isInteger(tenureDays) || tenureDays < 1 || tenureDays > 3650) {
-    financeAlert("Tenure must be between 1 and 3650 days.", "error");
-    return;
-  }
-
-  const btn = document.getElementById("finance-open-btn");
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Opening...";
-  }
-
-  const res = await api.openPointsFinance({
-    plan_type: planType,
-    principal_points: principalPoints,
-    tenure_days: tenureDays,
-  }).catch(() => null);
-
-  if (btn) {
-    btn.disabled = false;
-    btn.textContent = "Open FD/RD";
-  }
-
-  if (!res?.success) {
-    financeAlert(res?.message || "Failed to open investment.", "error");
-    return;
-  }
-
-  document.getElementById("finance-principal").value = "";
-  financeAlert(res.message || "Investment opened.", "success");
-  await loadFinanceOverview();
-  await loadLeaderboard();
-  if (currentUser?.role !== "admin") await loadRewards();
-}
-
-async function closeFinanceInvestment(id) {
-  const res = await api.closePointsFinance(id).catch(() => null);
-  if (!res?.success) {
-    financeAlert(res?.message || "Could not close this investment yet.", "error");
-    return;
-  }
-
-  financeAlert(res.message || "Investment closed successfully.", "success");
-  await loadFinanceOverview();
-  await loadLeaderboard();
-  if (currentUser?.role !== "admin") await loadRewards();
-}
-
-window.closeFinanceInvestment = closeFinanceInvestment;
-
 // ── Bootstrap ─────────────────────────────────────────────────────────────
 (async () => {
   const me = await api.me().catch(() => null);
@@ -1699,12 +1560,6 @@ window.closeFinanceInvestment = closeFinanceInvestment;
     const ptEl = document.getElementById("user-points");
     ptEl.style.display = "block";
     document.getElementById("points-value").textContent = me.user.total_points;
-
-    const financeWrap = document.getElementById("finance-sidebar-wrapper");
-    if (financeWrap) financeWrap.style.display = "block";
-    const investLink = document.getElementById("sidebar-invest-link");
-    if (investLink) investLink.style.display = "block";
-    document.getElementById("finance-open-btn")?.addEventListener("click", openFinanceInvestment);
   }
 
   // Set min date for new challenges
@@ -1721,10 +1576,7 @@ window.closeFinanceInvestment = closeFinanceInvestment;
 
   // Load rewards (non-admin only)
   if (role !== "admin") {
-    await Promise.all([
-      loadRewards(),
-      loadFinanceOverview(),
-    ]);
+    await loadRewards();
   }
 })();
 
@@ -1851,7 +1703,7 @@ function updateAiHintsMeta(challengeId) {
     noteEl.textContent =
       `Hints are challenge-specific. Hint 1 is free. ` +
       `Hint 2 costs ${hintCosts[2]} pts, Hint 3 costs ${hintCosts[3]} pts, Hint 4 costs ${hintCosts[4]} pts. ` +
-      `Hints can still be unlocked when balance is low, and points may go negative.`;
+      `Hints require enough points and cannot make your balance negative.`;
   }
   if (balanceEl) {
     balanceEl.textContent = `Available points: ${balance} pts`;
@@ -1911,16 +1763,23 @@ function renderUnlockedHints(challengeId) {
     const isNext = level === unlocked + 1;
     const cost = Number(hintCosts[level] || 0);
 
-    if (isNext) {
+    const canAfford = cost <= 0 || balance >= cost;
+
+    if (isNext && canAfford) {
       btn.disabled = false;
       btn.textContent = hintUnlockLabel(level, hintCosts);
+    } else if (isNext) {
+      btn.disabled = true;
+      btn.textContent = `Need ${cost} pts`;
     } else {
       btn.disabled = true;
       btn.textContent = `Locked Hint ${level}`;
     }
 
     if (text && isNext && cost > 0) {
-      text.textContent = `Unlock this hint for ${cost} pts. Current balance: ${balance} pts (can go negative).`;
+      text.textContent = canAfford
+        ? `Unlock this hint for ${cost} pts. Current balance: ${balance} pts.`
+        : `Need ${cost} pts to unlock. Current balance: ${balance} pts.`;
     }
   }
 }

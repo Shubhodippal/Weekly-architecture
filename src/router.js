@@ -36,12 +36,12 @@ import { handleOpenInvestment } from "./handlers/finance/openInvestment.js";
 import { handleCloseInvestment } from "./handlers/finance/closeInvestment.js";
 import { handleBankingOverview } from "./handlers/banking/getOverview.js";
 import { handleApplyCreditCard } from "./handlers/banking/applyCreditCard.js";
-import { handleDebitSpend } from "./handlers/banking/debitSpend.js";
-import { handleCreditSpend } from "./handlers/banking/creditSpend.js";
+import { handleCreditBorrow } from "./handlers/banking/creditBorrow.js";
 import { handleCreditPay } from "./handlers/banking/creditPay.js";
 import { handleOpenFdInvestment } from "./handlers/banking/openFdInvestment.js";
 import { handleOpenRdInvestment } from "./handlers/banking/openRdInvestment.js";
 import { handleCloseBankingInvestment } from "./handlers/banking/closeBankingInvestment.js";
+import { handlePrematureWithdrawBankingInvestment } from "./handlers/banking/prematureWithdrawBankingInvestment.js";
 import { handleListComments } from "./handlers/comments/listComments.js";
 import { handlePostComment } from "./handlers/comments/postComment.js";
 import { handleDeleteComment } from "./handlers/comments/deleteComment.js";
@@ -214,11 +214,8 @@ export async function router(request, env) {
     if (method === "POST" && pathname === "/api/banking/credit-card/apply")
       return handleApplyCreditCard(request, env);
 
-    if (method === "POST" && pathname === "/api/banking/debit/spend")
-      return handleDebitSpend(request, env);
-
-    if (method === "POST" && pathname === "/api/banking/credit/spend")
-      return handleCreditSpend(request, env);
+    if (method === "POST" && pathname === "/api/banking/credit/borrow")
+      return handleCreditBorrow(request, env);
 
     if (method === "POST" && pathname === "/api/banking/credit/pay")
       return handleCreditPay(request, env);
@@ -232,6 +229,10 @@ export async function router(request, env) {
     const closeBankingInvMatch = pathname.match(/^\/api\/banking\/investments\/(\d+)\/close$/);
     if (method === "POST" && closeBankingInvMatch)
       return handleCloseBankingInvestment(request, env, closeBankingInvMatch[1]);
+
+    const prematureWithdrawMatch = pathname.match(/^\/api\/banking\/investments\/(\d+)\/premature-withdraw$/);
+    if (method === "POST" && prematureWithdrawMatch)
+      return handlePrematureWithdrawBankingInvestment(request, env, prematureWithdrawMatch[1]);
 
     // Reward routes (admin)
     if (method === "GET"  && pathname === "/api/admin/rewards/tiers")

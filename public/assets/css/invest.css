@@ -15,6 +15,22 @@
   gap: 18px;
 }
 
+.invest-policy {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.invest-policy strong {
+  font-weight: 700;
+}
+
 .invest-hero {
   border: 1px solid var(--border);
   border-radius: 22px;
@@ -69,7 +85,7 @@
   background: #fff;
 }
 
-.balance-card--debit {
+.balance-card--points {
   background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
 }
 
@@ -132,7 +148,7 @@
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -295,6 +311,8 @@
 .investment-item__actions {
   margin-top: 10px;
   display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
   justify-content: flex-end;
 }
 

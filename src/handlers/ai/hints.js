@@ -2,6 +2,7 @@ import { requireAuth } from "../../middleware/auth.js";
 import { json } from "../../utils/response.js";
 import { generateHintForLevel } from "../../services/aiAssist.js";
 import { getHintCosts } from "../../utils/hintCosts.js";
+import { getUserNetPoints } from "../../utils/pointsFinance.js";
 
 /**
  * POST /api/ai/hints
@@ -79,6 +80,16 @@ export async function handleHints(request, env) {
       }
 
       const costForLevel = Number(hintCosts[revealLevel] || 0);
+      const balanceBeforeUnlock = await getUserNetPoints(env, userId);
+      if (costForLevel > 0 && balanceBeforeUnlock < costForLevel) {
+        return json({
+          success: false,
+          message: `Insufficient points. Hint ${revealLevel} costs ${costForLevel} pts, but you have ${balanceBeforeUnlock} pts.`,
+          hint_costs: hintCosts,
+          balance: balanceBeforeUnlock,
+          required_cost: costForLevel,
+        }, 400);
+      }
 
       const existingHints = [
         String(row.hint_1 || ""),
@@ -135,7 +146,7 @@ export async function handleHints(request, env) {
       { level: 4, text: String(row.hint_4 || "") },
     ];
 
-    const balance = await getUserNetBalance(env, userId);
+    const balance = await getUserNetPoints(env, userId);
     const latestUnlockCost = hasRevealLevel ? Number(hintCosts[revealLevel] || 0) : 0;
     return json({
       success: true,
@@ -158,15 +169,4 @@ export async function handleHints(request, env) {
       },
     }, 500);
   }
-}
-
-async function getUserNetBalance(env, userId) {
-  const row = await env.DB.prepare(`
-    SELECT
-      COALESCE((SELECT SUM(points) FROM submissions WHERE user_id = ?), 0)
-      + COALESCE((SELECT SUM(points) FROM bonus_points WHERE user_id = ?), 0)
-      - COALESCE((SELECT SUM(points_consumed) FROM user_rewards WHERE user_id = ?), 0)
-      AS balance
-  `).bind(userId, userId, userId).first();
-  return Number(row?.balance || 0);
 }

@@ -2,7 +2,6 @@ import { requireAuth } from "../../middleware/auth.js";
 import { json } from "../../utils/response.js";
 import {
   ensureBankingTables,
-  ensureUserDebitCard,
   getUserBankingSnapshot,
   PAYOUT_MODES,
   payoutCycleDays,
@@ -41,13 +40,12 @@ export async function handleOpenFdInvestment(request, env) {
 
   const userId = session.userId;
   await ensureBankingTables(env);
-  await ensureUserDebitCard(env, userId);
 
-  const debitBalance = await getUserNetPoints(env, userId);
-  if (debitBalance < principalPoints) {
+  const pointsBalance = await getUserNetPoints(env, userId);
+  if (pointsBalance < principalPoints) {
     return json({
       success: false,
-      message: `Insufficient debit balance. Available: ${debitBalance} pts.`,
+      message: `Insufficient points balance. Available: ${pointsBalance} pts.`,
     }, 400);
   }
 

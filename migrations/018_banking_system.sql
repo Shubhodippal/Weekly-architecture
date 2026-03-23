@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS banking_meta_settings (
 INSERT OR IGNORE INTO banking_meta_settings
   (id, credit_annual_rate, default_credit_limit, updated_at)
 VALUES
-  (1, 24, 500, datetime('now'));
+  (1, 12, 500, datetime('now'));
 
 CREATE TABLE IF NOT EXISTS bank_cards (
   id                       INTEGER PRIMARY KEY AUTOINCREMENT,

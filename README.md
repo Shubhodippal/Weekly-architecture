@@ -21,7 +21,7 @@ Cloudflare Workers app for running coding challenges with:
 
 - `src/` — Worker code (router, handlers, utilities, jobs)
 - `public/` — Frontend pages and assets
-- `migrations/` — Incremental SQL migrations (`001` to `017`)
+- `migrations/` — Incremental SQL migrations (`001` to `022`)
 - `db.sql` — Consolidated full schema (single-file canonical schema)
 - `schema.sql` — Legacy initial schema bootstrap
 - `wrangler.toml` — Worker bindings/config

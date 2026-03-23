@@ -322,17 +322,9 @@ const api = {
     return apiFetch("/api/banking/credit-card/apply", { method: "POST" });
   },
 
-  /** POST /api/banking/debit/spend */
-  bankingDebitSpend(amount, note = "") {
-    return apiFetch("/api/banking/debit/spend", {
-      method: "POST",
-      body: JSON.stringify({ amount, note }),
-    });
-  },
-
-  /** POST /api/banking/credit/spend */
-  bankingCreditSpend(amount, note = "") {
-    return apiFetch("/api/banking/credit/spend", {
+  /** POST /api/banking/credit/borrow */
+  bankingCreditBorrow(amount, note = "") {
+    return apiFetch("/api/banking/credit/borrow", {
       method: "POST",
       body: JSON.stringify({ amount, note }),
     });
@@ -365,6 +357,14 @@ const api = {
   /** POST /api/banking/investments/:id/close */
   closeBankingInvestment(id) {
     return apiFetch(`/api/banking/investments/${id}/close`, { method: "POST" });
+  },
+
+  /** POST /api/banking/investments/:id/premature-withdraw */
+  prematureWithdrawBankingInvestment(id, amount = null) {
+    return apiFetch(`/api/banking/investments/${id}/premature-withdraw`, {
+      method: "POST",
+      body: JSON.stringify(amount === null ? {} : { amount }),
+    });
   },
 
   /** POST /api/ai/hints */

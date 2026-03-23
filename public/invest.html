@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Invest & Cards - Challenge Accepted</title>
+  <title>Invest & Credit - Challenge Accepted</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/base.css" />
@@ -26,15 +26,15 @@
     <section class="invest-hero">
       <div class="invest-hero__head">
         <div class="invest-hero__eyebrow">Banking</div>
-        <h1 class="invest-hero__title">Invest, spend, and manage credit with points.</h1>
+        <h1 class="invest-hero__title">Invest and borrow points with credit.</h1>
         <p class="invest-hero__sub">
-          Open FD/RD plans, control payout preferences, and manage debit and credit balances in one place.
+          Open FD/RD plans, track your points, and borrow or repay credit from one place.
         </p>
       </div>
       <div class="invest-hero__stats">
-        <article class="balance-card balance-card--debit">
-          <div class="balance-card__label">Debit Balance</div>
-          <div class="balance-card__value" id="summary-debit">0</div>
+        <article class="balance-card balance-card--points">
+          <div class="balance-card__label">Points Balance</div>
+          <div class="balance-card__value" id="summary-points">0</div>
           <div class="balance-card__meta">Spendable points</div>
         </article>
         <article class="balance-card balance-card--credit">
@@ -52,49 +52,47 @@
 
     <div id="invest-alert" class="alert"></div>
 
+    <section class="invest-policy" aria-label="Premature withdrawal policy">
+      <strong>Premature withdrawal policy:</strong>
+      <span>
+        Full or partial premature withdrawal is allowed before maturity, and a
+        2% fine is deducted from the withdrawn amount.
+      </span>
+    </section>
+
     <section class="invest-panel">
       <div class="invest-panel__head">
-        <h2>Cards</h2>
+        <h2>Credit Card</h2>
         <div id="cards-meta" class="invest-panel__meta"></div>
       </div>
       <div class="cards-grid">
-        <article class="bank-card bank-card--debit">
-          <div class="bank-card__top">
-            <div class="bank-card__title">Debit Card</div>
-            <div class="bank-card__last4" id="debit-last4">••••</div>
-          </div>
-          <div class="bank-card__row"><span>Status</span><strong id="debit-status">Active</strong></div>
-          <div class="bank-card__row"><span>Debit balance</span><strong id="debit-balance-inline">0 pts</strong></div>
-          <form id="debit-spend-form" class="inline-form">
-            <div class="inline-form__grid">
-              <input id="debit-amount" type="number" min="1" class="form-input" placeholder="Spend amount" required />
-              <input id="debit-note" type="text" maxlength="120" class="form-input" placeholder="Note (optional)" />
-            </div>
-            <button id="debit-spend-btn" class="btn btn-outline btn-sm" type="submit">Debit Spend</button>
-          </form>
-        </article>
-
         <article class="bank-card bank-card--credit">
           <div class="bank-card__top">
             <div class="bank-card__title">Credit Card</div>
             <div class="bank-card__last4" id="credit-last4">Not issued</div>
           </div>
           <div id="credit-card-placeholder" class="credit-placeholder">
-            <p>Apply once to activate your credit card.</p>
+            <p>Apply once to activate borrowing points on credit.</p>
             <button id="credit-apply-btn" class="btn btn-primary btn-sm" type="button">Apply for Credit Card</button>
           </div>
           <div id="credit-card-live" style="display:none;">
             <div class="bank-card__row"><span>Status</span><strong id="credit-status">Active</strong></div>
             <div class="bank-card__row"><span>Credit limit</span><strong id="credit-limit">0 pts</strong></div>
             <div class="bank-card__row"><span>Outstanding</span><strong id="credit-outstanding">0 pts</strong></div>
-            <div class="bank-card__row"><span>Annual interest</span><strong id="credit-apr">0%</strong></div>
+            <div class="bank-card__row"><span>Principal due</span><strong id="credit-principal-due">0 pts</strong></div>
+            <div class="bank-card__row"><span>Interest due</span><strong id="credit-interest-due">0 pts</strong></div>
+            <div class="bank-card__row"><span>Total due</span><strong id="credit-total-due">0 pts</strong></div>
+            <div class="bank-card__row"><span>Monthly compound interest</span><strong id="credit-apr">0%</strong></div>
+            <div class="bank-card__row"><span>Interest updated</span><strong id="credit-interest-updated">—</strong></div>
+            <div class="bank-card__row"><span>Last borrowed</span><strong id="credit-last-borrowed">—</strong></div>
+            <div class="bank-card__row"><span>Last payment</span><strong id="credit-last-payment">—</strong></div>
 
-            <form id="credit-spend-form" class="inline-form">
+            <form id="credit-borrow-form" class="inline-form">
               <div class="inline-form__grid">
-                <input id="credit-spend-amount" type="number" min="1" class="form-input" placeholder="Spend amount" required />
-                <input id="credit-spend-note" type="text" maxlength="120" class="form-input" placeholder="Note (optional)" />
+                <input id="credit-borrow-amount" type="number" min="1" class="form-input" placeholder="Borrow amount" required />
+                <input id="credit-borrow-note" type="text" maxlength="120" class="form-input" placeholder="Note (optional)" />
               </div>
-              <button id="credit-spend-btn" class="btn btn-outline btn-sm" type="submit">Spend via Credit</button>
+              <button id="credit-borrow-btn" class="btn btn-outline btn-sm" type="submit">Borrow Points</button>
             </form>
 
             <form id="credit-pay-form" class="inline-form">

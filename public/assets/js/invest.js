@@ -23,10 +23,10 @@ function fmtPts(value) {
 }
 
 function fmtDateTime(value) {
-  if (!value) return "—";
+  if (!value) return "-";
   const normalized = String(value).includes("T") ? String(value) : String(value).replace(" ", "T") + "Z";
   const dt = new Date(normalized);
-  if (Number.isNaN(dt.getTime())) return "—";
+  if (Number.isNaN(dt.getTime())) return "-";
   return dt.toLocaleString(undefined, {
     day: "numeric",
     month: "short",
@@ -50,11 +50,11 @@ function showAlert(message, type = "info") {
 
 function extractSnapshot(data) {
   if (!data || typeof data !== "object") return null;
-  if (data.debit_balance === undefined || !Array.isArray(data.cards) || !Array.isArray(data.investments)) {
+  if (data.points_balance === undefined || !Array.isArray(data.cards) || !Array.isArray(data.investments)) {
     return null;
   }
   return {
-    debit_balance: Number(data.debit_balance || 0),
+    points_balance: Number(data.points_balance || 0),
     credit_balance: Number(data.credit_balance || 0),
     credit_available: Number(data.credit_available || 0),
     finance_rates: data.finance_rates || { fd: 0, rd: 0 },
@@ -65,10 +65,9 @@ function extractSnapshot(data) {
 }
 
 function renderSummary(snapshot) {
-  byId("summary-debit").textContent = Number(snapshot.debit_balance || 0).toLocaleString();
+  byId("summary-points").textContent = Number(snapshot.points_balance || 0).toLocaleString();
   byId("summary-credit").textContent = Number(snapshot.credit_balance || 0).toLocaleString();
   byId("summary-credit-available").textContent = Number(snapshot.credit_available || 0).toLocaleString();
-  byId("debit-balance-inline").textContent = fmtPts(snapshot.debit_balance);
 
   const fdRate = Number(snapshot.finance_rates?.fd || 0);
   const rdRate = Number(snapshot.finance_rates?.rd || 0);
@@ -78,11 +77,7 @@ function renderSummary(snapshot) {
 
 function renderCards(snapshot) {
   const cardsMeta = byId("cards-meta");
-  const debitCard = (snapshot.cards || []).find((c) => c.card_type === "debit");
   const creditCard = (snapshot.cards || []).find((c) => c.card_type === "credit");
-
-  byId("debit-last4").textContent = debitCard ? `•••• ${debitCard.card_last4}` : "••••";
-  byId("debit-status").textContent = debitCard ? String(debitCard.status || "active").toUpperCase() : "ACTIVE";
 
   const placeholder = byId("credit-card-placeholder");
   const live = byId("credit-card-live");
@@ -93,18 +88,26 @@ function renderCards(snapshot) {
     live.style.display = "none";
     const applyBtn = byId("credit-apply-btn");
     applyBtn.disabled = false;
-    cardsMeta.textContent = "Debit card is auto-issued for every user.";
+    cardsMeta.textContent = "Apply to start borrowing points on credit.";
     return;
   }
 
   placeholder.style.display = "none";
   live.style.display = "block";
 
-  byId("credit-last4").textContent = `•••• ${creditCard.card_last4}`;
+  byId("credit-last4").textContent = `**** ${creditCard.card_last4}`;
   byId("credit-status").textContent = String(creditCard.status || "active").toUpperCase();
   byId("credit-limit").textContent = fmtPts(creditCard.credit_limit);
   byId("credit-outstanding").textContent = fmtPts(creditCard.outstanding_balance);
-  byId("credit-apr").textContent = `${Number(creditCard.annual_interest_rate || 0)}%`;
+  const principalDue = Number(creditCard.principal_outstanding || 0);
+  const interestDue = Number(creditCard.interest_outstanding || 0);
+  byId("credit-principal-due").textContent = fmtPts(principalDue);
+  byId("credit-interest-due").textContent = fmtPts(interestDue);
+  byId("credit-total-due").textContent = fmtPts(principalDue + interestDue);
+  byId("credit-apr").textContent = `${Number((creditCard.monthly_interest_rate ?? creditCard.annual_interest_rate) || 0)}%`;
+  byId("credit-interest-updated").textContent = fmtDateTime(creditCard.interest_last_applied_at);
+  byId("credit-last-borrowed").textContent = fmtDateTime(creditCard.last_borrowed_at);
+  byId("credit-last-payment").textContent = fmtDateTime(creditCard.last_payment_at);
   cardsMeta.textContent = `Credit available: ${fmtPts(snapshot.credit_available)}`;
 }
 
@@ -121,6 +124,7 @@ function renderInvestments(snapshot) {
   list.innerHTML = investments.map((inv) => {
     const isClosed = String(inv.status) === "closed";
     const isMatured = !isClosed && Boolean(inv.can_close);
+    const canPrematureWithdraw = !isClosed && !isMatured && Number(inv.principal_points || 0) > 0;
     const statusClass = isClosed
       ? "investment-item__status--closed"
       : isMatured
@@ -129,9 +133,15 @@ function renderInvestments(snapshot) {
     const statusText = isClosed ? "Closed" : isMatured ? "Matured" : "Active";
     const plan = String(inv.plan_type || "fd").toUpperCase();
     const payoutMode = PAYOUT_LABELS[String(inv.payout_mode || "closure")] || String(inv.payout_mode || "closure");
+    const nextPayoutLabel = isClosed
+      ? "-"
+      : String(inv.payout_mode || "closure") === "closure"
+        ? "At closure"
+        : fmtDateTime(inv.next_payout_at);
     const rdMeta = plan === "RD"
       ? `<div><span>Recurring</span><strong>${fmtPts(inv.recurring_amount)} • ${String(inv.recurring_frequency || "-")}</strong></div>
-         <div><span>Installments</span><strong>${inv.installments_paid}/${inv.installments_total}</strong></div>`
+         <div><span>Installments</span><strong>${inv.installments_paid}/${inv.installments_total}</strong></div>
+         <div><span>Next installment</span><strong>${fmtDateTime(inv.next_installment_at)}</strong></div>`
       : "";
 
     return `
@@ -146,11 +156,15 @@ function renderInvestments(snapshot) {
           <div><span>Payout mode</span><strong>${payoutMode}</strong></div>
           <div><span>Opened</span><strong>${fmtDateTime(inv.opened_at)}</strong></div>
           <div><span>Maturity</span><strong>${fmtDateTime(inv.maturity_at)}</strong></div>
+          <div><span>Next payout</span><strong>${nextPayoutLabel}</strong></div>
           <div><span>Accrued interest</span><strong>${fmtPts(inv.accrued_interest_points || 0)}</strong></div>
+          <div><span>Payout credited</span><strong>${fmtPts(inv.payout_points || 0)}</strong></div>
           ${rdMeta}
         </div>
         <div class="investment-item__actions">
           ${inv.can_close ? `<button class="btn btn-primary btn-sm js-close-investment" data-id="${inv.id}">Close & Credit</button>` : ""}
+          ${canPrematureWithdraw ? `<button class="btn btn-outline btn-sm js-premature-partial" data-id="${inv.id}" data-principal="${Number(inv.principal_points || 0)}">Premature Partial (-2%)</button>` : ""}
+          ${canPrematureWithdraw ? `<button class="btn btn-danger btn-sm js-premature-full" data-id="${inv.id}" data-principal="${Number(inv.principal_points || 0)}">Premature Full Close (-2%)</button>` : ""}
         </div>
       </article>
     `;
@@ -166,6 +180,72 @@ function renderInvestments(snapshot) {
       btn.disabled = false;
       btn.textContent = "Close & Credit";
       applySnapshotResponse(res, "Investment closed and credited.");
+    });
+  });
+
+  list.querySelectorAll(".js-premature-full").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number.parseInt(btn.dataset.id, 10);
+      const principal = Number.parseInt(btn.dataset.principal, 10);
+      if (!id || !Number.isInteger(principal) || principal <= 0) return;
+
+      const penalty = Math.ceil(principal * 0.02);
+      const credited = principal - penalty;
+      if (credited <= 0) {
+        showAlert("Principal is too small for premature full closure after penalty.", "error");
+        return;
+      }
+
+      const ok = window.confirm(
+        `Premature full closure will withdraw ${principal} pts with 2% penalty (${penalty} pts). You will receive ${credited} pts. Continue?`
+      );
+      if (!ok) return;
+
+      btn.disabled = true;
+      btn.textContent = "Processing...";
+      const res = await api.prematureWithdrawBankingInvestment(id).catch(() => null);
+      btn.disabled = false;
+      btn.textContent = "Premature Full Close (-2%)";
+      applySnapshotResponse(res, "Premature full closure completed.");
+    });
+  });
+
+  list.querySelectorAll(".js-premature-partial").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number.parseInt(btn.dataset.id, 10);
+      const principal = Number.parseInt(btn.dataset.principal, 10);
+      if (!id || !Number.isInteger(principal) || principal <= 0) return;
+
+      const input = window.prompt(`Enter premature withdrawal amount (max ${principal}):`);
+      if (input === null) return;
+      const amount = Number.parseInt(String(input).trim(), 10);
+      if (!Number.isInteger(amount) || amount <= 0) {
+        showAlert("Enter a valid positive withdrawal amount.", "error");
+        return;
+      }
+      if (amount > principal) {
+        showAlert(`Amount exceeds current principal (${principal} pts).`, "error");
+        return;
+      }
+
+      const penalty = Math.ceil(amount * 0.02);
+      const credited = amount - penalty;
+      if (credited <= 0) {
+        showAlert("Withdrawal amount is too small after 2% penalty.", "error");
+        return;
+      }
+
+      const ok = window.confirm(
+        `Premature partial withdrawal: amount ${amount} pts, penalty ${penalty} pts (2%), credited ${credited} pts. Continue?`
+      );
+      if (!ok) return;
+
+      btn.disabled = true;
+      btn.textContent = "Processing...";
+      const res = await api.prematureWithdrawBankingInvestment(id, amount).catch(() => null);
+      btn.disabled = false;
+      btn.textContent = "Premature Partial (-2%)";
+      applySnapshotResponse(res, "Premature partial withdrawal completed.");
     });
   });
 }
@@ -222,45 +302,24 @@ async function handleApplyCreditCard() {
   applySnapshotResponse(res, "Credit card activated.");
 }
 
-async function handleDebitSpend(e) {
+async function handleCreditBorrow(e) {
   e.preventDefault();
-  const amount = Number.parseInt(byId("debit-amount").value, 10);
-  const note = String(byId("debit-note").value || "").trim();
+  const amount = Number.parseInt(byId("credit-borrow-amount").value, 10);
+  const note = String(byId("credit-borrow-note").value || "").trim();
   if (!Number.isInteger(amount) || amount <= 0) {
-    showAlert("Enter a valid debit spend amount.", "error");
+    showAlert("Enter a valid credit borrow amount.", "error");
     return;
   }
 
-  const btn = byId("debit-spend-btn");
+  const btn = byId("credit-borrow-btn");
   btn.disabled = true;
   btn.textContent = "Processing...";
-  const res = await api.bankingDebitSpend(amount, note).catch(() => null);
+  const res = await api.bankingCreditBorrow(amount, note).catch(() => null);
   btn.disabled = false;
-  btn.textContent = "Debit Spend";
-  if (applySnapshotResponse(res, "Debit transaction completed.")) {
-    byId("debit-amount").value = "";
-    byId("debit-note").value = "";
-  }
-}
-
-async function handleCreditSpend(e) {
-  e.preventDefault();
-  const amount = Number.parseInt(byId("credit-spend-amount").value, 10);
-  const note = String(byId("credit-spend-note").value || "").trim();
-  if (!Number.isInteger(amount) || amount <= 0) {
-    showAlert("Enter a valid credit spend amount.", "error");
-    return;
-  }
-
-  const btn = byId("credit-spend-btn");
-  btn.disabled = true;
-  btn.textContent = "Processing...";
-  const res = await api.bankingCreditSpend(amount, note).catch(() => null);
-  btn.disabled = false;
-  btn.textContent = "Spend via Credit";
-  if (applySnapshotResponse(res, "Credit spend recorded.")) {
-    byId("credit-spend-amount").value = "";
-    byId("credit-spend-note").value = "";
+  btn.textContent = "Borrow Points";
+  if (applySnapshotResponse(res, "Points borrowed on credit.")) {
+    byId("credit-borrow-amount").value = "";
+    byId("credit-borrow-note").value = "";
   }
 }
 
@@ -278,7 +337,11 @@ async function handleCreditPay(e) {
   const res = await api.bankingCreditPay(amount).catch(() => null);
   btn.disabled = false;
   btn.textContent = "Pay Credit Bill";
-  if (applySnapshotResponse(res, "Credit payment successful.")) {
+  const breakdown = res?.payment_breakdown;
+  const breakdownMsg = breakdown
+    ? `Bill was ${breakdown.due_before_payment.principal} (principal) + ${breakdown.due_before_payment.interest} (interest) = ${breakdown.due_before_payment.total} pts. Paid ${breakdown.paid_principal} principal + ${breakdown.paid_interest} interest.`
+    : "Credit payment successful.";
+  if (applySnapshotResponse(res, breakdownMsg)) {
     byId("credit-pay-amount").value = "";
   }
 }
@@ -351,8 +414,7 @@ byId("logout-btn")?.addEventListener("click", async () => {
 });
 
 byId("credit-apply-btn")?.addEventListener("click", handleApplyCreditCard);
-byId("debit-spend-form")?.addEventListener("submit", handleDebitSpend);
-byId("credit-spend-form")?.addEventListener("submit", handleCreditSpend);
+byId("credit-borrow-form")?.addEventListener("submit", handleCreditBorrow);
 byId("credit-pay-form")?.addEventListener("submit", handleCreditPay);
 byId("fd-form")?.addEventListener("submit", handleOpenFd);
 byId("rd-form")?.addEventListener("submit", handleOpenRd);

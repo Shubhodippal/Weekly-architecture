@@ -16,6 +16,7 @@ import {
 /**
  * PATCH /api/admin/grading/settings
  * Admin: update grade points, hint costs, finance rates, and banking controls.
+ * Note: monthly credit interest is stored in legacy DB column credit_annual_rate.
  */
 export async function handleAdminUpdateGradingSettings(request, env) {
   const { session, error } = await requireAuth(request, env);
@@ -78,10 +79,11 @@ export async function handleAdminUpdateGradingSettings(request, env) {
   }
 
   const bankingUpdates = {};
-  if (bankingMetaSource.credit_annual_rate !== undefined) {
-    const rate = Number.parseFloat(bankingMetaSource.credit_annual_rate);
+  const creditMonthlyRateRaw = bankingMetaSource.credit_monthly_rate ?? bankingMetaSource.credit_annual_rate;
+  if (creditMonthlyRateRaw !== undefined) {
+    const rate = Number.parseFloat(creditMonthlyRateRaw);
     if (Number.isNaN(rate) || rate < 0 || rate > 1000) {
-      return json({ success: false, message: "credit_annual_rate must be a non-negative number (max 1000)" }, 400);
+      return json({ success: false, message: "credit monthly interest must be a non-negative number (max 1000)" }, 400);
     }
     bankingUpdates.credit_annual_rate = Number(rate.toFixed(2));
   }
