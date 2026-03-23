@@ -3,7 +3,6 @@ import { json } from "../../utils/response.js";
 import {
   addDaysIso,
   ensureBankingTables,
-  ensureUserDebitCard,
   PAYOUT_MODES,
   payoutCycleDays,
   RD_FREQUENCIES,
@@ -52,13 +51,12 @@ export async function handleOpenRdInvestment(request, env) {
 
   const userId = session.userId;
   await ensureBankingTables(env);
-  await ensureUserDebitCard(env, userId);
 
-  const debitBalance = await getUserNetPoints(env, userId);
-  if (debitBalance < recurringAmount) {
+  const pointsBalance = await getUserNetPoints(env, userId);
+  if (pointsBalance < recurringAmount) {
     return json({
       success: false,
-      message: `Insufficient debit balance. Available: ${debitBalance} pts.`,
+      message: `Insufficient points balance. Available: ${pointsBalance} pts.`,
     }, 400);
   }
 

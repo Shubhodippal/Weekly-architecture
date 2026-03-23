@@ -4,7 +4,7 @@ import { getUserBankingSnapshot } from "../../utils/banking.js";
 
 /**
  * GET /api/banking/overview
- * User: get debit/credit card state and FD/RD investments.
+ * User: get points balance, credit card state, and FD/RD investments.
  */
 export async function handleBankingOverview(request, env) {
   const { session, error } = await requireAuth(request, env);

@@ -78,39 +78,6 @@
           <div class="ps-points__label">🎯 total points</div>
         </div>
 
-        <div id="finance-sidebar-wrapper" class="finance-sidebar" style="display:none;">
-          <div class="finance-sidebar__head">📈 Points Finance</div>
-          <div class="finance-sidebar__rates" id="finance-rates">FD --% • RD --%</div>
-          <div id="finance-alert" class="alert"></div>
-
-          <div class="finance-sidebar__form">
-            <div class="form-group" style="margin-bottom:10px;">
-              <label class="form-label" for="finance-plan" style="font-size:12px;">Plan</label>
-              <select id="finance-plan" class="form-input" style="font-size:13px;padding:8px 10px;">
-                <option value="fd">FD</option>
-                <option value="rd">RD</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin-bottom:10px;">
-              <label class="form-label" for="finance-principal" style="font-size:12px;">Points to invest</label>
-              <input id="finance-principal" type="number" min="1" class="form-input" style="font-size:13px;padding:8px 10px;" placeholder="e.g. 100" />
-            </div>
-            <div class="form-group" style="margin-bottom:10px;">
-              <label class="form-label" for="finance-tenure" style="font-size:12px;">Tenure (days)</label>
-              <input id="finance-tenure" type="number" min="1" class="form-input" style="font-size:13px;padding:8px 10px;" value="30" />
-            </div>
-            <button id="finance-open-btn" class="btn btn-primary btn-sm" style="width:100%;">Open FD/RD</button>
-          </div>
-
-          <div id="finance-investments-list" class="finance-sidebar__list">
-            <div class="comments-loading">Loading finance plans...</div>
-          </div>
-        </div>
-
-        <a href="/invest.html" id="sidebar-invest-link" class="sidebar-link" style="display:none;margin-top:10px;text-align:center;">
-          🏦 Open Full Banking
-        </a>
-
         <!-- My Rewards ladder (non-admin, hidden until loaded) -->
         <div id="rewards-sidebar-wrapper" style="display:none;margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px;">
           <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">🎁 My Rewards</div>
@@ -462,7 +429,7 @@
       </div>
       <div class="modal-body">
         <div class="ai-hints">
-          <div id="ai-hints-note" class="ai-hints-note">Hints are challenge-specific. Hint 1 is free. Unlock in order: 1 -> 2 -> 3 -> 4. Hint costs can make balance negative.</div>
+          <div id="ai-hints-note" class="ai-hints-note">Hints are challenge-specific. Hint 1 is free. Unlock in order: 1 -> 2 -> 3 -> 4. Hints require enough points and cannot make balance negative.</div>
           <div id="ai-hints-balance" class="ai-hints-balance">Available points: --</div>
           <div id="ai-hints-loading" class="ai-hints-loading" style="display:none;">
             <span class="spinner"></span>
